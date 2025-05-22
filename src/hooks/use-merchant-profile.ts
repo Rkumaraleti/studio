@@ -11,7 +11,7 @@ const defaultProfileData: Omit<MerchantProfile, 'id'> = {
   restaurantName: "My Awesome Restaurant",
   currency: "USD",
   paymentGatewayConfigured: false,
-  stripeAccountId: "",
+  paymentGatewayAccountId: "", // Renamed from stripeAccountId
 };
 
 export function useMerchantProfile() {

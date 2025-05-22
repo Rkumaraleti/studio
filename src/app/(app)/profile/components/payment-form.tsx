@@ -27,7 +27,7 @@ const paymentFormSchema = z.object({
   restaurantName: z.string().min(2, "Restaurant name is required"),
   currency: z.string().length(3, "Currency code must be 3 letters, e.g., USD").toUpperCase(),
   paymentGatewayConfigured: z.boolean().default(false),
-  stripeAccountId: z.string().optional(),
+  paymentGatewayAccountId: z.string().optional(), // Renamed from stripeAccountId
 });
 
 type PaymentFormData = z.infer<typeof paymentFormSchema>;
@@ -42,7 +42,7 @@ export function PaymentForm() {
       restaurantName: "",
       currency: "USD",
       paymentGatewayConfigured: false,
-      stripeAccountId: "",
+      paymentGatewayAccountId: "", // Renamed
     },
   });
 
@@ -52,7 +52,7 @@ export function PaymentForm() {
         restaurantName: profile.restaurantName || "",
         currency: profile.currency || "USD",
         paymentGatewayConfigured: profile.paymentGatewayConfigured || false,
-        stripeAccountId: profile.stripeAccountId || "",
+        paymentGatewayAccountId: profile.paymentGatewayAccountId || "", // Renamed
       });
     }
   }, [profile, form]);
@@ -145,7 +145,7 @@ export function PaymentForm() {
               )}
             />
 
-            <SeparatorWithText text="Payment Gateway (Example: Stripe)" />
+            <SeparatorWithText text="Payment Gateway Configuration" />
             
             <FormField
               control={form.control}
@@ -157,7 +157,7 @@ export function PaymentForm() {
                       Enable Payment Gateway
                     </FormLabel>
                     <FormDescription>
-                      Connect your payment provider to accept online orders.
+                      Connect a payment provider to enable online orders.
                     </FormDescription>
                   </div>
                   <FormControl>
@@ -173,15 +173,15 @@ export function PaymentForm() {
             {form.watch("paymentGatewayConfigured") && (
               <FormField
                 control={form.control}
-                name="stripeAccountId"
+                name="paymentGatewayAccountId" // Renamed
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Stripe Account ID (Example)</FormLabel>
+                    <FormLabel>Payment Gateway Account ID / API Key</FormLabel> 
                     <FormControl>
-                      <Input placeholder="acct_xxxxxxxxxxxxxx" {...field} />
+                      <Input placeholder="e.g., acct_xxxxxxxx or your_api_key" {...field} />
                     </FormControl>
                     <FormDescription>
-                      This is a placeholder. Securely manage API keys on the server.
+                      Enter the relevant ID or key for your chosen payment provider.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -193,8 +193,8 @@ export function PaymentForm() {
               <ShieldCheck className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               <AlertTitle className="text-blue-800 dark:text-blue-200">Important Security Note</AlertTitle>
               <AlertDescription className="text-blue-700 dark:text-blue-300">
-                Never store sensitive API keys or payment credentials directly in client-side code or your frontend database.
-                This form is for UI demonstration purposes only. Real payment integration requires secure backend handling.
+                Never store highly sensitive API keys or secret credentials directly in client-side code or your frontend database if they grant extensive permissions.
+                This form is for UI demonstration. Real payment integration often requires secure backend handling of secrets.
               </AlertDescription>
             </Alert>
 

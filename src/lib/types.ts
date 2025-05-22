@@ -36,7 +36,7 @@ export interface MerchantProfile {
   id: string; // Firebase UID, serves as merchantId
   restaurantName: string;
   paymentGatewayConfigured: boolean; 
-  stripeAccountId?: string;
+  paymentGatewayAccountId?: string; // Renamed from stripeAccountId
   currency: string; // e.g., "USD"
   // Add other profile fields as needed, e.g., address, contact, logoUrl
   createdAt?: any; 
