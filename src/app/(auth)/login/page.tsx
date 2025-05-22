@@ -55,11 +55,18 @@ export default function LoginPage() {
     } catch (error: any) {
       console.error("Login error:", error);
       let errorMessage = "An unexpected error occurred. Please try again.";
-      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+      
+      if (error.code === 'auth/user-not-found' || 
+          error.code === 'auth/wrong-password' || 
+          error.code === 'auth/invalid-credential') {
         errorMessage = "Invalid email or password. Please try again.";
       } else if (error.code === 'auth/invalid-email') {
         errorMessage = "The email address is not valid.";
+      } else if (error.code === 'auth/user-disabled') {
+        errorMessage = "This account has been disabled. Please contact support.";
       }
+      // For other Firebase errors, the generic message will be used.
+
       toast({
         title: "Login Failed",
         description: errorMessage,
