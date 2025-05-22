@@ -3,96 +3,89 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import type { MerchantProfile } from '@/lib/types';
+import { useAuth } from '@/contexts/auth-context';
+import { db } from '@/lib/firebase/config';
+import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 
-const PROFILE_STORAGE_KEY = 'qrPlusMerchantProfile';
-
-// Function to generate a simple unique ID
-const generateUniqueId = (): string => {
-  return `merchant_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-};
-
-const defaultProfile: Omit<MerchantProfile, 'id'> = {
-  restaurantName: "My Restaurant",
+const defaultProfileData: Omit<MerchantProfile, 'id'> = {
+  restaurantName: "My Awesome Restaurant",
   currency: "USD",
   paymentGatewayConfigured: false,
   stripeAccountId: "",
 };
 
 export function useMerchantProfile() {
+  const { user, loading: authLoading } = useAuth();
   const [profile, setProfile] = useState<MerchantProfile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+  const [merchantId, setMerchantId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const storedProfile = localStorage.getItem(PROFILE_STORAGE_KEY);
-        if (storedProfile) {
-          setProfile(JSON.parse(storedProfile));
-        } else {
-          // Initialize with a new ID and default values
-          const newProfile: MerchantProfile = {
-            id: generateUniqueId(),
-            ...defaultProfile,
-          };
-          localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(newProfile));
-          setProfile(newProfile);
-        }
-      } catch (error) {
-        console.error("Failed to load merchant profile from localStorage:", error);
-        // Fallback to new profile if parsing fails
-        const newProfile: MerchantProfile = {
-            id: generateUniqueId(),
-            ...defaultProfile,
-          };
-        localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(newProfile)); // Attempt to save a valid new profile
-        setProfile(newProfile);
-      } finally {
-        setIsLoading(false);
-      }
+    if (authLoading) {
+      setIsLoadingProfile(true);
+      return;
     }
-  }, []);
 
-  const updateProfile = useCallback((updatedProfileData: Partial<Omit<MerchantProfile, 'id'>>) => {
-    setProfile((currentProfile) => {
-      if (!currentProfile) return null; // Should not happen if initialized correctly
-      const newProfile = { ...currentProfile, ...updatedProfileData };
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(newProfile));
-      }
-      return newProfile;
-    });
-  }, []);
-  
-  // Function to explicitly get the current merchant ID, even if profile is null during initial load
-  const getMerchantIdSync = (): string | null => {
-    if (typeof window !== 'undefined') {
-      try {
-        const storedProfile = localStorage.getItem(PROFILE_STORAGE_KEY);
-        if (storedProfile) {
-          const parsed = JSON.parse(storedProfile);
-          return parsed.id || null;
-        }
-         // If no profile, initialize one to get an ID (should ideally be covered by useEffect)
+    if (!user) {
+      setProfile(null);
+      setMerchantId(null);
+      setIsLoadingProfile(false);
+      return;
+    }
+
+    setMerchantId(user.uid);
+    setIsLoadingProfile(true);
+    const profileDocRef = doc(db, 'merchants', user.uid);
+
+    const unsubscribe = onSnapshot(profileDocRef, async (docSnap) => {
+      if (docSnap.exists()) {
+        setProfile({ id: docSnap.id, ...docSnap.data() } as MerchantProfile);
+      } else {
+        // Profile doesn't exist, create a default one
         const newProfile: MerchantProfile = {
-          id: generateUniqueId(),
-          ...defaultProfile,
+          id: user.uid,
+          ...defaultProfileData,
         };
-        localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(newProfile));
-        return newProfile.id;
-
-      } catch (error) {
-        console.error("Error getting merchantId sync:", error);
-        return null;
+        try {
+          await setDoc(profileDocRef, newProfile);
+          setProfile(newProfile);
+        } catch (error) {
+          console.error("Error creating default merchant profile:", error);
+          // Handle error, maybe set profile to null or a local default
+        }
       }
-    }
-    return null;
-  };
+      setIsLoadingProfile(false);
+    }, (error) => {
+      console.error("Error fetching merchant profile:", error);
+      setIsLoadingProfile(false);
+      // Potentially set an error state here
+    });
 
+    return () => unsubscribe(); // Cleanup snapshot listener
+
+  }, [user, authLoading]);
+
+  const updateProfile = useCallback(async (updatedProfileData: Partial<Omit<MerchantProfile, 'id'>>) => {
+    if (!user) {
+      console.error("User not authenticated, cannot update profile.");
+      return; // Or throw an error / show toast
+    }
+    
+    const profileDocRef = doc(db, 'merchants', user.uid);
+    try {
+      // We use setDoc with merge:true to only update provided fields or create if not exists
+      await setDoc(profileDocRef, updatedProfileData, { merge: true });
+      // Profile state will be updated by the onSnapshot listener
+    } catch (error) {
+      console.error("Error updating merchant profile:", error);
+      // Handle error (e.g., show toast to user)
+    }
+  }, [user]);
 
   return {
     profile,
-    isLoadingProfile: isLoading,
+    isLoadingProfile: isLoadingProfile || authLoading,
     updateProfile,
-    merchantId: profile?.id || getMerchantIdSync(), // Provide merchantId, try sync version as fallback
+    merchantId, // This is user.uid when authenticated
   };
 }

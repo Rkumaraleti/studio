@@ -1,14 +1,15 @@
+// src/app/(app)/qr-code/page.tsx
 "use client"; 
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Download, QrCode as QrCodeIcon, Share2, Copy, Eye, Smartphone } from 'lucide-react';
+import { Download, QrCode as QrCodeIcon, Share2, Copy, Eye, Smartphone, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
-import { useMerchantProfile } from '@/hooks/use-merchant-profile'; // Import the hook
-import { Skeleton } from '@/components/ui/skeleton'; // For loading state
+import { useMerchantProfile } from '@/hooks/use-merchant-profile'; 
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function QrCodePage() {
   const [menuUrl, setMenuUrl] = useState('');
@@ -21,17 +22,19 @@ export default function QrCodePage() {
       const currentOrigin = window.location.origin;
       const url = `${currentOrigin}/menu/${merchantId}`;
       setMenuUrl(url);
-      // Using a more robust QR code generator API, ensure it's free and reliable for your use case
       setQrCodeUrl(`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(url)}&format=png&qzone=1&margin=10&ecc=M`);
+    } else if (!isLoadingProfile && !merchantId) {
+      // Handle case where merchantId is definitively not available after loading
+      setMenuUrl('');
+      setQrCodeUrl('');
     }
-  }, [merchantId]);
+  }, [merchantId, isLoadingProfile]);
 
   const handleDownload = () => {
     if (!qrCodeUrl) return;
     const link = document.createElement('a');
-    // For qrserver, direct link usually works for download if it's a GET request
     link.href = qrCodeUrl; 
-    link.download = `menu-qr-code-${merchantId}.png`;
+    link.download = `menu-qr-code-${merchantId || 'unknown'}.png`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -50,12 +53,14 @@ export default function QrCodePage() {
       });
   };
 
-  if (isLoadingProfile || !merchantId) {
+  if (isLoadingProfile) {
     return (
       <div className="space-y-8 max-w-4xl mx-auto text-center">
         <div>
-          <Skeleton className="h-10 w-3/4 mx-auto mb-2" />
-          <Skeleton className="h-6 w-1/2 mx-auto" />
+          <h1 className="text-3xl font-bold tracking-tight text-primary mb-2">Your Menu QR Code</h1>
+          <p className="text-muted-foreground flex items-center justify-center">
+            <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Loading merchant details...
+          </p>
         </div>
         <Card className="shadow-xl overflow-hidden">
           <CardHeader>
@@ -77,6 +82,19 @@ export default function QrCodePage() {
             </div>
           </CardContent>
         </Card>
+      </div>
+    );
+  }
+
+  if (!merchantId && !isLoadingProfile) {
+    return (
+      <div className="space-y-8 max-w-4xl mx-auto text-center">
+         <div>
+          <h1 className="text-3xl font-bold tracking-tight text-primary mb-2">QR Code Unavailable</h1>
+          <p className="text-muted-foreground">
+            We couldn't load your merchant ID. Please ensure you are logged in and try again.
+          </p>
+        </div>
       </div>
     );
   }
@@ -109,7 +127,7 @@ export default function QrCodePage() {
                   height={280}
                   className="rounded-md"
                   data-ai-hint="qr code" 
-                  priority // Prioritize loading the QR code image
+                  priority 
                 />
               </div>
             ) : (
@@ -166,7 +184,7 @@ export default function QrCodePage() {
                   src={menuUrl}
                   title="Menu Preview"
                   className="w-full h-full border-0 rounded-md bg-background"
-                  sandbox="allow-scripts allow-same-origin" // Restrict iframe capabilities for security
+                  sandbox="allow-scripts allow-same-origin" 
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-background rounded-md">
@@ -181,8 +199,8 @@ export default function QrCodePage() {
             </p>
           </CardFooter>
         </Card>
-         <Button asChild variant="secondary" className="w-full">
-          <a href={menuUrl} target="_blank" rel="noopener noreferrer">
+         <Button asChild variant="secondary" className="w-full" disabled={!menuUrl}>
+          <a href={menuUrl || '#'} target="_blank" rel="noopener noreferrer">
             <Smartphone className="mr-2 h-5 w-5" /> Open Menu in New Tab
           </a>
         </Button>
@@ -191,8 +209,6 @@ export default function QrCodePage() {
   );
 }
 
-// Small Label component as it's not imported by default in ui/input.tsx
-// but often used with inputs
 const Label = ({ htmlFor, className, children }: { htmlFor?: string; className?: string; children: React.ReactNode }) => (
   <label htmlFor={htmlFor} className={`block text-sm font-medium text-foreground ${className}`}>
     {children}

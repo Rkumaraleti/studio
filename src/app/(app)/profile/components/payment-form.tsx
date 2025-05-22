@@ -1,7 +1,8 @@
+// src/app/(app)/profile/components/payment-form.tsx
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm, Controller } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,7 +23,6 @@ import { useMerchantProfile } from "@/hooks/use-merchant-profile";
 import { useEffect } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-
 const paymentFormSchema = z.object({
   restaurantName: z.string().min(2, "Restaurant name is required"),
   currency: z.string().length(3, "Currency code must be 3 letters, e.g., USD").toUpperCase(),
@@ -34,7 +34,7 @@ type PaymentFormData = z.infer<typeof paymentFormSchema>;
 
 export function PaymentForm() {
   const { toast } = useToast();
-  const { profile, isLoadingProfile, updateProfile } = useMerchantProfile();
+  const { profile, isLoadingProfile, updateProfile, merchantId } = useMerchantProfile();
 
   const form = useForm<PaymentFormData>({
     resolver: zodResolver(paymentFormSchema),
@@ -49,20 +49,29 @@ export function PaymentForm() {
   useEffect(() => {
     if (profile) {
       form.reset({
-        restaurantName: profile.restaurantName,
-        currency: profile.currency,
-        paymentGatewayConfigured: profile.paymentGatewayConfigured,
+        restaurantName: profile.restaurantName || "",
+        currency: profile.currency || "USD",
+        paymentGatewayConfigured: profile.paymentGatewayConfigured || false,
         stripeAccountId: profile.stripeAccountId || "",
       });
     }
   }, [profile, form]);
 
-  function onSubmit(data: PaymentFormData) {
-    updateProfile(data);
-    toast({
-      title: "Profile Updated",
-      description: "Your restaurant and payment settings have been saved.",
-    });
+  async function onSubmit(data: PaymentFormData) {
+    try {
+      await updateProfile(data);
+      toast({
+        title: "Profile Updated",
+        description: "Your restaurant and payment settings have been saved.",
+      });
+    } catch (error) {
+      toast({
+        title: "Update Failed",
+        description: "Could not save your profile settings. Please try again.",
+        variant: "destructive",
+      });
+      console.error("Profile update error:", error);
+    }
   }
 
   if (isLoadingProfile) {
@@ -81,6 +90,19 @@ export function PaymentForm() {
     );
   }
 
+  if (!profile && !isLoadingProfile) {
+     return (
+      <Card className="shadow-lg max-w-2xl mx-auto">
+        <CardHeader>
+          <CardTitle className="text-2xl">Profile Not Found</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p>Could not load merchant profile. You might need to log in again or ensure you have an internet connection.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card className="shadow-lg max-w-2xl mx-auto">
       <CardHeader>
@@ -89,7 +111,7 @@ export function PaymentForm() {
           Restaurant & Payment Settings
         </CardTitle>
         <CardDescription>
-          Manage your restaurant details and payment gateway configuration. Your Merchant ID is: {profile?.id}
+          Manage your restaurant details and payment gateway configuration. Your Merchant ID is: {merchantId}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -176,8 +198,8 @@ export function PaymentForm() {
               </AlertDescription>
             </Alert>
 
-            <Button type="submit" size="lg" disabled={form.formState.isSubmitting}>
-              {form.formState.isSubmitting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Save className="mr-2 h-5 w-5" />}
+            <Button type="submit" size="lg" disabled={form.formState.isSubmitting || isLoadingProfile}>
+              {form.formState.isSubmitting || isLoadingProfile ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Save className="mr-2 h-5 w-5" />}
               Save Settings
             </Button>
           </form>
