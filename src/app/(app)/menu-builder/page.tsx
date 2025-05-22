@@ -12,6 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { ListChecks, Info, Loader2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useAuth } from "@/contexts/auth-context";
+import { useMerchantProfile } from "@/hooks/use-merchant-profile"; // Import useMerchantProfile
 import { db } from "@/lib/firebase/config";
 import { 
   collection, 
@@ -23,22 +24,24 @@ import {
   deleteDoc, 
   doc,
   serverTimestamp,
-  orderBy // Added orderBy
+  orderBy
 } from "firebase/firestore";
 
 export default function MenuBuilderPage() {
   const { user, loading: authLoading } = useAuth();
+  // Use useMerchantProfile to get publicMerchantId
+  const { publicMerchantId, isLoadingProfile: isLoadingMerchantProfile } = useMerchantProfile(); 
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
-  const [editingItem, setEditingItem] =useState<MenuItem | undefined>(undefined);
+  const [editingItem, setEditingItem] = useState<MenuItem | undefined>(undefined);
   const { toast } = useToast();
   const [isLoadingItems, setIsLoadingItems] = useState(true);
 
   useEffect(() => {
-    if (authLoading) {
+    if (authLoading || isLoadingMerchantProfile) {
       setIsLoadingItems(true);
       return;
     }
-    if (!user) {
+    if (!user || !publicMerchantId) { // Check for publicMerchantId as well
       setMenuItems([]);
       setIsLoadingItems(false);
       return;
@@ -46,11 +49,11 @@ export default function MenuBuilderPage() {
 
     setIsLoadingItems(true);
     const menuItemsCollectionRef = collection(db, "menuItems");
-    // Query items for the current merchant, ordered by creation date
+    // Query items for the current merchant using publicMerchantId, ordered by creation date
     const q = query(
       menuItemsCollectionRef, 
-      where("merchantId", "==", user.uid),
-      orderBy("createdAt", "desc") // Order by creation time, newest first
+      where("merchantId", "==", publicMerchantId), // Use publicMerchantId for querying
+      orderBy("createdAt", "desc")
     );
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -58,7 +61,7 @@ export default function MenuBuilderPage() {
       querySnapshot.forEach((doc) => {
         items.push({ id: doc.id, ...doc.data() } as MenuItem);
       });
-      setMenuItems(items); // Rely on Firestore's ordering
+      setMenuItems(items);
       setIsLoadingItems(false);
     }, (error) => {
       console.error("Error fetching menu items:", error);
@@ -67,19 +70,22 @@ export default function MenuBuilderPage() {
     });
 
     return () => unsubscribe();
-  }, [user, authLoading, toast]);
+  }, [user, authLoading, publicMerchantId, isLoadingMerchantProfile, toast]);
 
-  const handleAddItem = async (data: Omit<MenuItem, 'id' | 'aiSuggestions' | 'merchantId' | 'createdAt' | 'updatedAt'>) => {
-    if (!user) {
-      toast({ title: "Authentication Error", description: "You must be logged in.", variant: "destructive" });
+  const handleAddItem = async (data: Omit<MenuItem, 'id' | 'merchantId' | 'createdAt' | 'updatedAt'>) => {
+    if (!user || !publicMerchantId) { // Ensure publicMerchantId is available
+      toast({ title: "Authentication or Profile Error", description: "You must be logged in and have a merchant profile.", variant: "destructive" });
       return;
     }
 
     try {
       if (editingItem) {
         const itemDocRef = doc(db, "menuItems", editingItem.id);
+        // Ensure merchantId is not accidentally changed during update
+        const { merchantId: currentItemMerchantId, ...restOfData } = data as any; 
         const updatedData = {
-            ...data,
+            ...restOfData, // Use restOfData which doesn't include merchantId from form
+            merchantId: publicMerchantId, // Ensure it's the correct publicMerchantId
             updatedAt: serverTimestamp() 
         };
         console.log("Attempting to update item:", editingItem.id, updatedData);
@@ -87,9 +93,9 @@ export default function MenuBuilderPage() {
         toast({ title: "Item Updated", description: `${data.name} has been updated successfully.` });
         setEditingItem(undefined);
       } else {
-        const newItemData = {
+        const newItemData: Omit<MenuItem, 'id'> = { // Explicitly type to match Firestore structure
           ...data,
-          merchantId: user.uid,
+          merchantId: publicMerchantId, // Use publicMerchantId
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         };
@@ -120,6 +126,8 @@ export default function MenuBuilderPage() {
     }
     try {
       console.log("Attempting to delete item:", itemId);
+      // Optional: Add a check here to ensure the item belongs to the current merchant if needed,
+      // though Firestore rules should ideally enforce this.
       await deleteDoc(doc(db, "menuItems", itemId));
       toast({ title: "Item Deleted", description: "The menu item has been removed." });
       if (editingItem?.id === itemId) {
@@ -135,7 +143,7 @@ export default function MenuBuilderPage() {
     }
   };
 
-  if (authLoading || (isLoadingItems && user)) {
+  if (authLoading || isLoadingMerchantProfile || (isLoadingItems && user && publicMerchantId)) {
     return (
       <div className="flex justify-center items-center h-64">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -158,6 +166,22 @@ export default function MenuBuilderPage() {
       </div>
      )
   }
+  
+  if (user && !publicMerchantId && !isLoadingMerchantProfile) {
+    return (
+      <div className="space-y-8 text-center">
+        <h1 className="text-3xl font-bold tracking-tight text-primary mb-2">Menu Builder</h1>
+         <Alert variant="default">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <AlertTitle>Setting up Profile</AlertTitle>
+            <AlertDescription>
+              Finalizing your merchant profile. This page will load shortly.
+            </AlertDescription>
+          </Alert>
+      </div>
+    );
+  }
+
 
   return (
     <div className="space-y-8">

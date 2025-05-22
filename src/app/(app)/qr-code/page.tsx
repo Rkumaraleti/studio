@@ -1,3 +1,4 @@
+
 // src/app/(app)/qr-code/page.tsx
 "use client"; 
 
@@ -5,36 +6,36 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Download, QrCode as QrCodeIcon, Share2, Copy, Eye, Smartphone, Loader2 } from 'lucide-react';
+import { Download, QrCode as QrCodeIcon, Share2, Copy, Eye, Smartphone, Loader2, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { useMerchantProfile } from '@/hooks/use-merchant-profile'; 
 import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function QrCodePage() {
   const [menuUrl, setMenuUrl] = useState('');
   const [qrCodeUrl, setQrCodeUrl] = useState('');
   const { toast } = useToast();
-  const { merchantId, isLoadingProfile } = useMerchantProfile(); // Use the hook
+  const { publicMerchantId, isLoadingProfile } = useMerchantProfile(); // Use publicMerchantId
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && merchantId) {
+    if (typeof window !== 'undefined' && publicMerchantId) {
       const currentOrigin = window.location.origin;
-      const url = `${currentOrigin}/menu/${merchantId}`;
+      const url = `${currentOrigin}/menu/${publicMerchantId}`; // Use publicMerchantId for the URL
       setMenuUrl(url);
       setQrCodeUrl(`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(url)}&format=png&qzone=1&margin=10&ecc=M`);
-    } else if (!isLoadingProfile && !merchantId) {
-      // Handle case where merchantId is definitively not available after loading
+    } else if (!isLoadingProfile && !publicMerchantId) {
       setMenuUrl('');
       setQrCodeUrl('');
     }
-  }, [merchantId, isLoadingProfile]);
+  }, [publicMerchantId, isLoadingProfile]);
 
   const handleDownload = () => {
     if (!qrCodeUrl) return;
     const link = document.createElement('a');
     link.href = qrCodeUrl; 
-    link.download = `menu-qr-code-${merchantId || 'unknown'}.png`;
+    link.download = `menu-qr-code-${publicMerchantId || 'unknown'}.png`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -86,15 +87,20 @@ export default function QrCodePage() {
     );
   }
 
-  if (!merchantId && !isLoadingProfile) {
+  if (!publicMerchantId && !isLoadingProfile) {
     return (
-      <div className="space-y-8 max-w-4xl mx-auto text-center">
+      <div className="space-y-8 max-w-4xl mx-auto">
          <div>
           <h1 className="text-3xl font-bold tracking-tight text-primary mb-2">QR Code Unavailable</h1>
-          <p className="text-muted-foreground">
-            We couldn't load your merchant ID. Please ensure you are logged in and try again.
-          </p>
         </div>
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Merchant ID Not Found</AlertTitle>
+          <AlertDescription>
+            We couldn't load your public Merchant ID. Please ensure you are logged in, your profile is set up, and try again.
+            If this issue persists, your profile might still be finalizing.
+          </AlertDescription>
+        </Alert>
       </div>
     );
   }
@@ -106,7 +112,7 @@ export default function QrCodePage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-primary mb-2">Your Menu QR Code</h1>
           <p className="text-muted-foreground">
-            Share this QR code with your customers for instant access to your digital menu. Your Merchant ID: <strong>{merchantId}</strong>
+            Share this QR code with your customers. Your Public Menu ID: <strong>{publicMerchantId}</strong>
           </p>
         </div>
 

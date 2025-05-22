@@ -1,3 +1,4 @@
+
 // src/app/(app)/profile/components/payment-form.tsx
 "use client";
 
@@ -16,7 +17,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Banknote, Save, ShieldCheck, Loader2 } from "lucide-react";
+import { Banknote, Save, ShieldCheck, Loader2, Info } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { useMerchantProfile } from "@/hooks/use-merchant-profile";
@@ -27,14 +28,15 @@ const paymentFormSchema = z.object({
   restaurantName: z.string().min(2, "Restaurant name is required"),
   currency: z.string().length(3, "Currency code must be 3 letters, e.g., USD").toUpperCase(),
   paymentGatewayConfigured: z.boolean().default(false),
-  paymentGatewayAccountId: z.string().optional(), // Renamed from stripeAccountId
+  paymentGatewayAccountId: z.string().optional(),
 });
 
 type PaymentFormData = z.infer<typeof paymentFormSchema>;
 
 export function PaymentForm() {
   const { toast } = useToast();
-  const { profile, isLoadingProfile, updateProfile, merchantId } = useMerchantProfile();
+  // Get publicMerchantId from the hook
+  const { profile, isLoadingProfile, updateProfile, publicMerchantId, authUserId } = useMerchantProfile();
 
   const form = useForm<PaymentFormData>({
     resolver: zodResolver(paymentFormSchema),
@@ -42,7 +44,7 @@ export function PaymentForm() {
       restaurantName: "",
       currency: "USD",
       paymentGatewayConfigured: false,
-      paymentGatewayAccountId: "", // Renamed
+      paymentGatewayAccountId: "",
     },
   });
 
@@ -52,14 +54,16 @@ export function PaymentForm() {
         restaurantName: profile.restaurantName || "",
         currency: profile.currency || "USD",
         paymentGatewayConfigured: profile.paymentGatewayConfigured || false,
-        paymentGatewayAccountId: profile.paymentGatewayAccountId || "", // Renamed
+        paymentGatewayAccountId: profile.paymentGatewayAccountId || "",
       });
     }
   }, [profile, form]);
 
   async function onSubmit(data: PaymentFormData) {
     try {
-      await updateProfile(data);
+      // Ensure not to pass publicMerchantId or id in the update object from form data
+      const { ...updateData } = data;
+      await updateProfile(updateData);
       toast({
         title: "Profile Updated",
         description: "Your restaurant and payment settings have been saved.",
@@ -90,18 +94,32 @@ export function PaymentForm() {
     );
   }
 
-  if (!profile && !isLoadingProfile) {
+  if (!profile && !isLoadingProfile && authUserId) { // Check authUserId to see if user is logged in
      return (
       <Card className="shadow-lg max-w-2xl mx-auto">
         <CardHeader>
-          <CardTitle className="text-2xl">Profile Not Found</CardTitle>
+          <CardTitle className="text-2xl flex items-center"><Info className="mr-2 h-6 w-6 text-orange-500" />Profile Initializing</CardTitle>
         </CardHeader>
         <CardContent>
-          <p>Could not load merchant profile. You might need to log in again or ensure you have an internet connection.</p>
+          <p>Your merchant profile is being set up. Please refresh in a moment if this persists.</p>
         </CardContent>
       </Card>
     );
   }
+  
+  if (!authUserId && !isLoadingProfile) { // No authenticated user
+     return (
+      <Card className="shadow-lg max-w-2xl mx-auto">
+        <CardHeader>
+          <CardTitle className="text-2xl">Profile Not Available</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p>Please log in to view and manage your profile.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
 
   return (
     <Card className="shadow-lg max-w-2xl mx-auto">
@@ -111,7 +129,7 @@ export function PaymentForm() {
           Restaurant & Payment Settings
         </CardTitle>
         <CardDescription>
-          Manage your restaurant details and payment gateway configuration. Your Merchant ID is: {merchantId}
+          Manage your restaurant details. Your Public Menu ID is: <strong>{publicMerchantId || "Generating..."}</strong>
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -173,7 +191,7 @@ export function PaymentForm() {
             {form.watch("paymentGatewayConfigured") && (
               <FormField
                 control={form.control}
-                name="paymentGatewayAccountId" // Renamed
+                name="paymentGatewayAccountId"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Payment Gateway Account ID / API Key</FormLabel> 
@@ -198,7 +216,7 @@ export function PaymentForm() {
               </AlertDescription>
             </Alert>
 
-            <Button type="submit" size="lg" disabled={form.formState.isSubmitting || isLoadingProfile}>
+            <Button type="submit" size="lg" disabled={form.formState.isSubmitting || isLoadingProfile || !publicMerchantId}>
               {form.formState.isSubmitting || isLoadingProfile ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Save className="mr-2 h-5 w-5" />}
               Save Settings
             </Button>

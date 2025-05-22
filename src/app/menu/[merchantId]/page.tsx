@@ -1,3 +1,4 @@
+
 // src/app/menu/[merchantId]/page.tsx
 "use client"; 
 
@@ -5,11 +6,11 @@ import { useEffect, useState } from "react";
 import type { MenuItem, MenuCategory, MerchantProfile } from "@/lib/types";
 import { MenuDisplayItem } from "./components/menu-display-item";
 import { useParams } from "next/navigation";
-import { UtensilsCrossed, Info, ShoppingBag, AlertTriangle } from "lucide-react";
+import { UtensilsCrossed, Info, ShoppingBag, AlertTriangle, Loader2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import Image from "next/image";
 import { db } from "@/lib/firebase/config";
-import { doc, getDoc, collection, query, where, getDocs, orderBy } from "firebase/firestore";
+import { collection, query, where, getDocs, orderBy, limit } from "firebase/firestore";
 import { Skeleton } from "@/components/ui/skeleton";
 
 // Helper to group items by category
@@ -21,17 +22,16 @@ const groupByCategory = (items: MenuItem[]): MenuCategory[] => {
     }
     categories[item.category].push(item);
   });
-  // Sort categories alphabetically for consistent order
   return Object.keys(categories).sort().map(categoryName => ({
     id: categoryName.toLowerCase().replace(/\s+/g, '-'),
     name: categoryName,
-    items: categories[categoryName].sort((a,b) => a.name.localeCompare(b.name)), // Sort items within category
+    items: categories[categoryName].sort((a,b) => a.name.localeCompare(b.name)),
   }));
 };
 
 export default function MerchantMenuPage() {
   const params = useParams();
-  const merchantId = params.merchantId as string;
+  const publicIdFromUrl = params.merchantId as string; // This is now the publicMerchantId
   
   const [merchantProfile, setMerchantProfile] = useState<MerchantProfile | null>(null);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
@@ -41,8 +41,8 @@ export default function MerchantMenuPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!merchantId) {
-      setError("Merchant ID is missing.");
+    if (!publicIdFromUrl) {
+      setError("Public Menu ID is missing from URL.");
       setIsLoading(false);
       return;
     }
@@ -50,29 +50,42 @@ export default function MerchantMenuPage() {
     const fetchData = async () => {
       setIsLoading(true);
       setError(null);
-      try {
-        // Fetch merchant profile
-        const merchantDocRef = doc(db, "merchants", merchantId);
-        const merchantDocSnap = await getDoc(merchantDocRef);
+      setMerchantProfile(null); // Reset profile on new fetch
+      setMenuItems([]);
+      setMenuCategories([]);
 
-        if (!merchantDocSnap.exists()) {
-          setError("Restaurant profile not found.");
-          setMerchantProfile(null);
+      try {
+        // Fetch merchant profile using publicMerchantId
+        const merchantsCollectionRef = collection(db, "merchants");
+        const merchantQuery = query(merchantsCollectionRef, where("publicMerchantId", "==", publicIdFromUrl), limit(1));
+        const merchantQuerySnapshot = await getDocs(merchantQuery);
+
+        let foundMerchant: MerchantProfile | null = null;
+        if (!merchantQuerySnapshot.empty) {
+          const merchantDoc = merchantQuerySnapshot.docs[0];
+          foundMerchant = { id: merchantDoc.id, ...merchantDoc.data() } as MerchantProfile;
+          setMerchantProfile(foundMerchant);
         } else {
-          setMerchantProfile({ id: merchantDocSnap.id, ...merchantDocSnap.data() } as MerchantProfile);
+          setError("Restaurant profile not found for this ID.");
+          setIsLoading(false);
+          return;
         }
 
-        // Fetch menu items
+        // Fetch menu items using publicMerchantId (which is stored as merchantId in menuItems)
         const menuItemsCollectionRef = collection(db, "menuItems");
-        const q = query(menuItemsCollectionRef, where("merchantId", "==", merchantId), orderBy("createdAt", "desc"));
-        const querySnapshot = await getDocs(q);
+        const itemsQuery = query(
+          menuItemsCollectionRef, 
+          where("merchantId", "==", publicIdFromUrl), // Query by publicMerchantId
+          orderBy("createdAt", "desc")
+        );
+        const itemsQuerySnapshot = await getDocs(itemsQuery);
         
-        const items: MenuItem[] = [];
-        querySnapshot.forEach((doc) => {
-          items.push({ id: doc.id, ...doc.data() } as MenuItem);
+        const fetchedItems: MenuItem[] = [];
+        itemsQuerySnapshot.forEach((doc) => {
+          fetchedItems.push({ id: doc.id, ...doc.data() } as MenuItem);
         });
-        setMenuItems(items);
-        setMenuCategories(groupByCategory(items));
+        setMenuItems(fetchedItems);
+        setMenuCategories(groupByCategory(fetchedItems));
 
       } catch (err) {
         console.error("Error fetching menu data:", err);
@@ -83,7 +96,7 @@ export default function MerchantMenuPage() {
     };
 
     fetchData();
-  }, [merchantId]);
+  }, [publicIdFromUrl]);
 
   if (isLoading) {
     return (
@@ -93,10 +106,10 @@ export default function MerchantMenuPage() {
           <Skeleton className="h-10 w-3/4 sm:w-1/2 mx-auto mb-2" />
           <Skeleton className="h-6 w-full max-w-md mx-auto" />
         </div>
-        <div className="text-center py-10">
-          <UtensilsCrossed className="mx-auto h-16 w-16 text-muted-foreground animate-pulse mb-4" />
+        <div className="text-center py-10 flex flex-col items-center justify-center">
+          <Loader2 className="h-16 w-16 text-primary animate-spin mb-4" />
           <h2 className="text-2xl font-semibold mb-2">Loading Menu...</h2>
-          <p className="text-muted-foreground">Please wait while we fetch the delicious items for you.</p>
+          <p className="text-muted-foreground">Please wait while we fetch the delicious items.</p>
         </div>
       </div>
     );
@@ -132,7 +145,7 @@ export default function MerchantMenuPage() {
           {restaurantName}
         </h1>
         <p className="max-w-2xl mx-auto text-lg text-muted-foreground">
-          Browse our delicious offerings and add your favorites to the cart.
+          Browse our delicious offerings and add your favorites to the cart. Public Menu ID: {publicIdFromUrl}
         </p>
       </div>
 
@@ -158,7 +171,6 @@ export default function MerchantMenuPage() {
               ))}
             </div>
           ) : (
-             // This case should be rare now given the check above, but good for robustness
             <Alert>
               <Info className="h-4 w-4" />
               <AlertTitle>No items yet!</AlertTitle>

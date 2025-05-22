@@ -1,7 +1,7 @@
 
 export interface MenuItem {
   id: string; // Firestore document ID
-  merchantId: string; // Firebase UID of the merchant
+  merchantId: string; // This will store the publicMerchantId
   name: string;
   description: string;
   price: number;
@@ -19,7 +19,7 @@ export interface MenuCategory {
   items: MenuItem[];
 }
 
-export interface CartItem extends MenuItem { // CartItem extends MenuItem
+export interface CartItem extends MenuItem {
   quantity: number;
 }
 
@@ -29,17 +29,17 @@ export interface Order {
   totalAmount: number;
   status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
   timestamp: any; // Firestore Timestamp
-  merchantId: string; // Firebase UID of the merchant
+  merchantId: string; // This will also store the publicMerchantId
   customerId?: string; // Optional: if you have customer accounts
 }
 
 export interface MerchantProfile {
-  id: string; // Firebase UID, serves as merchantId
+  id: string; // Firebase UID, this IS the document ID in 'merchants' collection
+  publicMerchantId: string; // The new publicly shareable, generated merchant ID
   restaurantName: string;
   paymentGatewayConfigured: boolean; 
   paymentGatewayAccountId?: string;
   currency: string; // e.g., "USD"
-  // Add other profile fields as needed, e.g., address, contact, logoUrl
   createdAt?: any; // Firestore Timestamp
   updatedAt?: any; // Firestore Timestamp
 }
