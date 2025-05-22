@@ -32,8 +32,8 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 const navItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/menu-builder", icon: ClipboardList, label: "Menu Builder" },
-  { href: "/profile", icon: UserCircle, label: "Profile" },
   { href: "/qr-code", icon: QrCodeIcon, label: "QR Code" },
+  { href: "/profile", icon: UserCircle, label: "Profile" },
 ]
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {

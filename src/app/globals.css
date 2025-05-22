@@ -26,8 +26,8 @@ body {
     --muted: 210 40% 96.1%;
     --muted-foreground: 215 20% 45%; /* #64748b */
 
-    --accent: 115 24% 52%; /* Vibrant Green #67A362 */
-    --accent-foreground: 0 0% 98%; /* White or light color for accent button text */
+    --accent: 35 100% 58%; /* Orange #FF992A */
+    --accent-foreground: 20 14.3% 4.1%; /* Dark Brown/Black for contrast */
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
@@ -43,8 +43,8 @@ body {
     --sidebar-foreground: 215 30% 35%; /* Darker text for sidebar #475569 */
     --sidebar-primary: 217 89% 61%; /* Saturated Blue for active/primary elements */
     --sidebar-primary-foreground: 210 40% 98%; /* Light text on sidebar primary */
-    --sidebar-accent: 115 24% 52%; /* Vibrant Green for accents in sidebar */
-    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-accent: 35 100% 58%; /* Orange #FF992A for accents in sidebar */
+    --sidebar-accent-foreground: 20 14.3% 4.1%; /* Dark Brown/Black for contrast */
     --sidebar-border: 214 25% 85%; /* Slightly darker border for sidebar elements #CDD4DB*/
     --sidebar-ring: 217 89% 61%;
 
@@ -74,8 +74,8 @@ body {
     --muted: 217 32% 17%;
     --muted-foreground: 215 20% 65%;
 
-    --accent: 115 24% 52%; /* Vibrant Green */
-    --accent-foreground: 222 47% 11%;
+    --accent: 35 100% 58%; /* Orange #FF992A */
+    --accent-foreground: 20 14.3% 4.1%; /* Dark Brown/Black for contrast */
 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
@@ -88,8 +88,8 @@ body {
     --sidebar-foreground: 210 40% 90%;
     --sidebar-primary: 217 89% 61%;
     --sidebar-primary-foreground: 222 47% 11%;
-    --sidebar-accent: 115 24% 52%;
-    --sidebar-accent-foreground: 222 47% 11%;
+    --sidebar-accent: 35 100% 58%; /* Orange #FF992A */
+    --sidebar-accent-foreground: 20 14.3% 4.1%; /* Dark Brown/Black for contrast */
     --sidebar-border: 217 32% 20%;
     --sidebar-ring: 217 89% 71%;
 

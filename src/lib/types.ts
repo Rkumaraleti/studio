@@ -6,6 +6,7 @@ export interface MenuItem {
   category: string;
   imageUrl?: string;
   aiSuggestions?: string[];
+  dataAiHint?: string; // Added to align with current usage in menu display
 }
 
 export interface MenuCategory {
@@ -28,9 +29,9 @@ export interface Order {
 }
 
 export interface MerchantProfile {
-  id:string;
+  id: string; // This will serve as merchantId
   restaurantName: string;
-  // Example, actual fields will depend on payment provider
   paymentGatewayConfigured: boolean; 
+  stripeAccountId?: string; // Added field for Stripe ID
   currency: string; // e.g., "USD"
 }
