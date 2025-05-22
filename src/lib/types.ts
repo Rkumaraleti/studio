@@ -18,7 +18,7 @@ export interface MenuCategory {
   items: MenuItem[];
 }
 
-export interface CartItem extends MenuItem { // CartItem likely won't need merchantId directly if derived from MenuItem
+export interface CartItem extends MenuItem { // CartItem extends MenuItem
   quantity: number;
 }
 
@@ -36,7 +36,7 @@ export interface MerchantProfile {
   id: string; // Firebase UID, serves as merchantId
   restaurantName: string;
   paymentGatewayConfigured: boolean; 
-  paymentGatewayAccountId?: string; // Renamed from stripeAccountId
+  paymentGatewayAccountId?: string;
   currency: string; // e.g., "USD"
   // Add other profile fields as needed, e.g., address, contact, logoUrl
   createdAt?: any; 
