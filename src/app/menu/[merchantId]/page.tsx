@@ -1,24 +1,16 @@
+// src/app/menu/[merchantId]/page.tsx
 "use client"; 
 
 import { useEffect, useState } from "react";
-import type { MenuItem, MenuCategory, MerchantProfile } from "@/lib/types"; // Added MerchantProfile
+import type { MenuItem, MenuCategory, MerchantProfile } from "@/lib/types";
 import { MenuDisplayItem } from "./components/menu-display-item";
 import { useParams } from "next/navigation";
-import { UtensilsCrossed, Info, ShoppingBag } from "lucide-react";
+import { UtensilsCrossed, Info, ShoppingBag, AlertTriangle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import Image from "next/image";
-
-// Sample Data - In a real app, fetch this based on merchantId
-const sampleMenuItems: MenuItem[] = [
-  { id: "1", name: "Margherita Pizza", description: "Classic delight with 100% real mozzarella cheese", price: 12.99, category: "Pizzas", imageUrl: "https://placehold.co/600x400.png", dataAiHint: "pizza" },
-  { id: "2", name: "Pepperoni Passion", description: "Loaded with spicy pepperoni and extra cheese.", price: 14.99, category: "Pizzas", imageUrl: "https://placehold.co/600x400.png", dataAiHint: "pepperoni pizza"},
-  { id: "3", name: "Caesar Salad", description: "Crisp romaine lettuce, parmesan, croutons, and Caesar dressing.", price: 8.50, category: "Salads", imageUrl: "https://placehold.co/600x400.png", dataAiHint: "salad" },
-  { id: "4", name: "Coca-Cola", description: "Classic refreshing Coca-Cola.", price: 2.50, category: "Drinks", imageUrl: "https://placehold.co/600x400.png", dataAiHint: "beverage" },
-  { id: "5", name: "Garlic Bread", description: "Toasted bread with garlic butter and herbs.", price: 5.00, category: "Sides", imageUrl: "https://placehold.co/600x400.png", dataAiHint: "bread appetizer"},
-  { id: "6", name: "Veggie Supreme Pizza", description: "A medley of fresh vegetables on a cheesy base.", price: 13.99, category: "Pizzas", imageUrl: "https://placehold.co/600x400.png", dataAiHint: "vegetarian pizza" },
-  { id: "7", name: "Chicken Wings", description: "Spicy and tangy chicken wings, served with a dip.", price: 9.99, category: "Sides", imageUrl: "https://placehold.co/600x400.png", dataAiHint: "chicken wings" },
-  { id: "8", name: "Iced Tea", description: "Refreshing lemon iced tea.", price: 2.75, category: "Drinks", imageUrl: "https://placehold.co/600x400.png", dataAiHint: "iced tea"},
-];
+import { db } from "@/lib/firebase/config";
+import { doc, getDoc, collection, query, where, getDocs, orderBy } from "firebase/firestore";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // Helper to group items by category
 const groupByCategory = (items: MenuItem[]): MenuCategory[] => {
@@ -29,61 +21,100 @@ const groupByCategory = (items: MenuItem[]): MenuCategory[] => {
     }
     categories[item.category].push(item);
   });
-  return Object.keys(categories).map(categoryName => ({
+  // Sort categories alphabetically for consistent order
+  return Object.keys(categories).sort().map(categoryName => ({
     id: categoryName.toLowerCase().replace(/\s+/g, '-'),
     name: categoryName,
-    items: categories[categoryName],
+    items: categories[categoryName].sort((a,b) => a.name.localeCompare(b.name)), // Sort items within category
   }));
 };
-
-const PROFILE_STORAGE_KEY = 'qrPlusMerchantProfile'; // Same key as in useMerchantProfile
 
 export default function MerchantMenuPage() {
   const params = useParams();
   const merchantId = params.merchantId as string;
+  
+  const [merchantProfile, setMerchantProfile] = useState<MerchantProfile | null>(null);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [menuCategories, setMenuCategories] = useState<MenuCategory[]>([]);
-  const [restaurantName, setRestaurantName] = useState("Welcome");
+  
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setIsLoading(true);
-    console.log("Displaying menu for merchant:", merchantId);
-    
-    // Attempt to load restaurant name from localStorage if this merchantId matches the stored one
-    if (typeof window !== 'undefined') {
-      const storedProfileData = localStorage.getItem(PROFILE_STORAGE_KEY);
-      if (storedProfileData) {
-        try {
-          const parsedProfile: MerchantProfile = JSON.parse(storedProfileData);
-          if (parsedProfile.id === merchantId) {
-            setRestaurantName(parsedProfile.restaurantName);
-          } else {
-             setRestaurantName(`Menu for ID: ${merchantId.substring(0,8)}...`); // Fallback if ID doesn't match
-          }
-        } catch (e) {
-          console.error("Error parsing profile for menu page:", e);
-          setRestaurantName(`Menu (ID: ${merchantId.substring(0,8)}...)`);
-        }
-      } else {
-         setRestaurantName(`Digital Menu`); // Generic if no profile stored
-      }
+    if (!merchantId) {
+      setError("Merchant ID is missing.");
+      setIsLoading(false);
+      return;
     }
 
-    // For now, use sample data for menu items
-    // In a real app, you would fetch menu items specific to merchantId
-    setMenuCategories(groupByCategory(sampleMenuItems));
-    setIsLoading(false);
+    const fetchData = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        // Fetch merchant profile
+        const merchantDocRef = doc(db, "merchants", merchantId);
+        const merchantDocSnap = await getDoc(merchantDocRef);
+
+        if (!merchantDocSnap.exists()) {
+          setError("Restaurant profile not found.");
+          setMerchantProfile(null);
+        } else {
+          setMerchantProfile({ id: merchantDocSnap.id, ...merchantDocSnap.data() } as MerchantProfile);
+        }
+
+        // Fetch menu items
+        const menuItemsCollectionRef = collection(db, "menuItems");
+        const q = query(menuItemsCollectionRef, where("merchantId", "==", merchantId), orderBy("createdAt", "desc"));
+        const querySnapshot = await getDocs(q);
+        
+        const items: MenuItem[] = [];
+        querySnapshot.forEach((doc) => {
+          items.push({ id: doc.id, ...doc.data() } as MenuItem);
+        });
+        setMenuItems(items);
+        setMenuCategories(groupByCategory(items));
+
+      } catch (err) {
+        console.error("Error fetching menu data:", err);
+        setError("Could not load menu. Please try again later.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
   }, [merchantId]);
 
   if (isLoading) {
     return (
-      <div className="text-center py-10">
-        <UtensilsCrossed className="mx-auto h-16 w-16 text-muted-foreground animate-pulse mb-4" />
-        <h2 className="text-2xl font-semibold mb-2">Loading Menu...</h2>
-        <p className="text-muted-foreground">Please wait while we fetch the delicious items for you.</p>
+      <div className="space-y-12">
+        <div className="text-center border-b pb-8">
+          <Skeleton className="w-full h-48 md:h-64 object-cover rounded-lg mb-6 shadow-lg" />
+          <Skeleton className="h-10 w-3/4 sm:w-1/2 mx-auto mb-2" />
+          <Skeleton className="h-6 w-full max-w-md mx-auto" />
+        </div>
+        <div className="text-center py-10">
+          <UtensilsCrossed className="mx-auto h-16 w-16 text-muted-foreground animate-pulse mb-4" />
+          <h2 className="text-2xl font-semibold mb-2">Loading Menu...</h2>
+          <p className="text-muted-foreground">Please wait while we fetch the delicious items for you.</p>
+        </div>
       </div>
     );
   }
+
+  if (error) {
+    return (
+      <div className="text-center py-10">
+        <Alert variant="destructive" className="max-w-lg mx-auto">
+          <AlertTriangle className="h-5 w-5" />
+          <AlertTitle>Error Loading Menu</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+  
+  const restaurantName = merchantProfile?.restaurantName || `Digital Menu`;
 
   return (
     <div className="space-y-12">
@@ -105,12 +136,12 @@ export default function MerchantMenuPage() {
         </p>
       </div>
 
-      {menuCategories.length === 0 && !isLoading && (
+      {!isLoading && menuItems.length === 0 && !error && (
         <Alert variant="default" className="max-w-md mx-auto">
           <ShoppingBag className="h-5 w-5" />
           <AlertTitle>Menu Coming Soon!</AlertTitle>
           <AlertDescription>
-            This restaurant is setting up their menu. Please check back later!
+            This restaurant is still setting up their menu or has no items listed. Please check back later!
           </AlertDescription>
         </Alert>
       )}
@@ -127,11 +158,12 @@ export default function MerchantMenuPage() {
               ))}
             </div>
           ) : (
+             // This case should be rare now given the check above, but good for robustness
             <Alert>
               <Info className="h-4 w-4" />
               <AlertTitle>No items yet!</AlertTitle>
               <AlertDescription>
-                There are currently no items available in the {category.name} category for this restaurant.
+                There are currently no items available in the {category.name} category.
               </AlertDescription>
             </Alert>
           )}
