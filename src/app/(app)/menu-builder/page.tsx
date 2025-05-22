@@ -1,3 +1,4 @@
+
 // src/app/(app)/menu-builder/page.tsx
 "use client";
 
@@ -21,7 +22,8 @@ import {
   updateDoc, 
   deleteDoc, 
   doc,
-  serverTimestamp // Optional: for created/updated timestamps
+  serverTimestamp,
+  orderBy // Added orderBy
 } from "firebase/firestore";
 
 export default function MenuBuilderPage() {
@@ -39,21 +41,24 @@ export default function MenuBuilderPage() {
     if (!user) {
       setMenuItems([]);
       setIsLoadingItems(false);
-      // Optionally, redirect or show message if user is not authenticated
-      // console.log("Menu Builder: User not authenticated.");
       return;
     }
 
     setIsLoadingItems(true);
     const menuItemsCollectionRef = collection(db, "menuItems");
-    const q = query(menuItemsCollectionRef, where("merchantId", "==", user.uid));
+    // Query items for the current merchant, ordered by creation date
+    const q = query(
+      menuItemsCollectionRef, 
+      where("merchantId", "==", user.uid),
+      orderBy("createdAt", "desc") // Order by creation time, newest first
+    );
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const items: MenuItem[] = [];
       querySnapshot.forEach((doc) => {
         items.push({ id: doc.id, ...doc.data() } as MenuItem);
       });
-      setMenuItems(items.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))); // Sort by creation time, newest first
+      setMenuItems(items); // Rely on Firestore's ordering
       setIsLoadingItems(false);
     }, (error) => {
       console.error("Error fetching menu items:", error);
@@ -61,10 +66,10 @@ export default function MenuBuilderPage() {
       setIsLoadingItems(false);
     });
 
-    return () => unsubscribe(); // Cleanup listener on component unmount
+    return () => unsubscribe();
   }, [user, authLoading, toast]);
 
-  const handleAddItem = async (data: Omit<MenuItem, 'id' | 'aiSuggestions' | 'merchantId' | 'createdAt'>) => {
+  const handleAddItem = async (data: Omit<MenuItem, 'id' | 'aiSuggestions' | 'merchantId' | 'createdAt' | 'updatedAt'>) => {
     if (!user) {
       toast({ title: "Authentication Error", description: "You must be logged in.", variant: "destructive" });
       return;
@@ -72,28 +77,34 @@ export default function MenuBuilderPage() {
 
     try {
       if (editingItem) {
-        // Update existing item
         const itemDocRef = doc(db, "menuItems", editingItem.id);
-        await updateDoc(itemDocRef, {
+        const updatedData = {
             ...data,
-            // updatedAt: serverTimestamp() // Optional
-        });
+            updatedAt: serverTimestamp() 
+        };
+        console.log("Attempting to update item:", editingItem.id, updatedData);
+        await updateDoc(itemDocRef, updatedData);
         toast({ title: "Item Updated", description: `${data.name} has been updated successfully.` });
         setEditingItem(undefined);
       } else {
-        // Add new item
         const newItemData = {
           ...data,
           merchantId: user.uid,
-          createdAt: serverTimestamp(), // Optional: for ordering or tracking
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
         };
+        console.log("Attempting to add new item:", newItemData);
         const docRef = await addDoc(collection(db, "menuItems"), newItemData);
-        // The onSnapshot listener will update the local state, including the new item with its ID.
+        console.log("Item added with ID:", docRef.id);
         toast({ title: "Item Added", description: `${data.name} has been added to your menu.` });
       }
     } catch (error) {
       console.error("Error saving menu item:", error);
-      toast({ title: "Save Error", description: "Could not save menu item.", variant: "destructive" });
+      let description = "Could not save menu item.";
+      if (error instanceof Error) {
+        description += ` Details: ${error.message}`;
+      }
+      toast({ title: "Save Error", description, variant: "destructive" });
     }
   };
 
@@ -108,15 +119,19 @@ export default function MenuBuilderPage() {
       return;
     }
     try {
+      console.log("Attempting to delete item:", itemId);
       await deleteDoc(doc(db, "menuItems", itemId));
       toast({ title: "Item Deleted", description: "The menu item has been removed." });
       if (editingItem?.id === itemId) {
         setEditingItem(undefined);
       }
-      // State will be updated by onSnapshot
     } catch (error) {
       console.error("Error deleting menu item:", error);
-      toast({ title: "Delete Error", description: "Could not delete menu item.", variant: "destructive" });
+      let description = "Could not delete menu item.";
+      if (error instanceof Error) {
+        description += ` Details: ${error.message}`;
+      }
+      toast({ title: "Delete Error", description, variant: "destructive" });
     }
   };
 
@@ -143,7 +158,6 @@ export default function MenuBuilderPage() {
       </div>
      )
   }
-
 
   return (
     <div className="space-y-8">

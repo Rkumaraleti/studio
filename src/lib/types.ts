@@ -1,3 +1,4 @@
+
 export interface MenuItem {
   id: string; // Firestore document ID
   merchantId: string; // Firebase UID of the merchant
@@ -39,6 +40,6 @@ export interface MerchantProfile {
   paymentGatewayAccountId?: string;
   currency: string; // e.g., "USD"
   // Add other profile fields as needed, e.g., address, contact, logoUrl
-  createdAt?: any; 
-  updatedAt?: any;
+  createdAt?: any; // Firestore Timestamp
+  updatedAt?: any; // Firestore Timestamp
 }
