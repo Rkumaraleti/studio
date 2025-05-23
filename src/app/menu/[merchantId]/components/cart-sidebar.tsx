@@ -1,3 +1,4 @@
+
 "use client";
 
 import Image from "next/image";
@@ -5,8 +6,9 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useCart } from "@/hooks/use-cart";
-import { MinusCircle, PlusCircle, ShoppingCart, Trash2, X } from "lucide-react";
+import { MinusCircle, PlusCircle, ShoppingCart, Trash2, CreditCard } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter, SheetClose } from "@/components/ui/sheet";
+import { useToast } from "@/hooks/use-toast"; // Import useToast
 
 export function CartSidebar() {
   const {
@@ -19,9 +21,29 @@ export function CartSidebar() {
     isCartOpen,
     closeCart,
   } = useCart();
+  const { toast } = useToast(); // Initialize useToast
 
   const totalItems = getTotalItems();
   const totalPrice = getTotalPrice();
+
+  const handleProceedToCheckout = () => {
+    if (items.length === 0) {
+      toast({
+        title: "Cart is Empty",
+        description: "Please add items to your cart before proceeding to checkout.",
+        variant: "destructive",
+      });
+      return;
+    }
+    // Placeholder for actual payment gateway integration
+    toast({
+      title: "Proceeding to Payment (Demo)",
+      description: `You would now be redirected to a payment gateway to pay $${totalPrice.toFixed(2)}. This is a demo.`,
+      duration: 5000, // Show toast for a bit longer
+    });
+    // In a real app, you would redirect to your payment provider here.
+    // e.g., router.push('/checkout') or call a payment API.
+  };
 
   return (
     <Sheet open={isCartOpen} onOpenChange={(isOpen) => !isOpen && closeCart()}>
@@ -103,15 +125,20 @@ export function CartSidebar() {
                 <span>${totalPrice.toFixed(2)}</span>
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" onClick={clearCart} className="w-full">
+                <Button variant="outline" onClick={clearCart} className="w-1/3">
                   Clear Cart
                 </Button>
-                <Button className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" disabled> {/* Checkout disabled for now */}
-                  Proceed to Checkout
+                <Button 
+                  onClick={handleProceedToCheckout} 
+                  className="w-2/3 bg-primary hover:bg-primary/90 text-primary-foreground"
+                  disabled={items.length === 0} // Disable if cart is empty
+                >
+                  <CreditCard className="mr-2 h-5 w-5" />
+                  Pay ${totalPrice.toFixed(2)}
                 </Button>
               </div>
                <p className="text-xs text-center text-muted-foreground">
-                Checkout functionality is currently disabled. This is a demo.
+                This is a demo. Actual payment integration is required for real transactions.
               </p>
             </SheetFooter>
           </>
