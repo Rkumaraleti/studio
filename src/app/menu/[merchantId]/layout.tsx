@@ -2,7 +2,7 @@
 // src/app/menu/[merchantId]/layout.tsx
 "use client"; 
 
-import { useEffect, useState, use } from "react"; // Added 'use'
+import { useEffect, useState, use } from "react"; 
 import Head from "next/head"; 
 import Link from "next/link";
 import { CartProvider } from '@/hooks/use-cart';
@@ -16,9 +16,9 @@ export default function PublicMenuLayout({
   params,
 }: {
   children: React.ReactNode;
-  params: Promise<{ merchantId: string }>; // Updated type to reflect params can be a Promise
+  params: Promise<{ merchantId: string }>; 
 }) {
-  const resolvedParams = use(params); // Unwrap the params Promise
+  const resolvedParams = use(params); 
 
   const [headerData, setHeaderData] = useState<{ name: string | null; loading: boolean; error: string | null }>({
     name: null,
@@ -36,7 +36,7 @@ export default function PublicMenuLayout({
   }, []);
 
   useEffect(() => {
-    if (!resolvedParams.merchantId) { // Use resolvedParams
+    if (!resolvedParams.merchantId) { 
       setHeaderData({ name: "Menu", loading: false, error: "Merchant ID missing." });
       return;
     }
@@ -45,7 +45,6 @@ export default function PublicMenuLayout({
       setHeaderData(prev => ({ ...prev, loading: true, error: null }));
       try {
         const merchantsCollectionRef = collection(db, "merchants");
-        // Use resolvedParams.merchantId for the query
         const merchantQuery = query(merchantsCollectionRef, where("publicMerchantId", "==", resolvedParams.merchantId), limit(1));
         const merchantQuerySnapshot = await getDocs(merchantQuery);
 
@@ -63,14 +62,14 @@ export default function PublicMenuLayout({
     };
 
     fetchRestaurantName();
-  }, [resolvedParams.merchantId]); // Depend on resolvedParams.merchantId
+  }, [resolvedParams.merchantId]); 
 
   return (
     <CartProvider>
       <>
         <Head>
           <link rel="manifest" href="/manifest.json" />
-          <meta name="theme-color" content="#6A4DBC" /> 
+          <meta name="theme-color" content="#A899E0" /> {/* Pale Purple (approx from HSL 270 65% 70%) */}
           <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
           <meta name="apple-mobile-web-app-capable" content="yes" />
           <meta name="apple-mobile-web-app-status-bar-style" content="default" /> 
@@ -79,8 +78,7 @@ export default function PublicMenuLayout({
         
         <div className="flex flex-col min-h-screen">
           <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur-sm">
-            <div className="container mx-auto flex h-14 items-center justify-between px-4 md:px-6">
-              {/* Use resolvedParams.merchantId for the Link href */}
+            <div className="flex h-14 items-center justify-between px-4 sm:px-6 lg:px-8"> {/* Changed: Full width padding */}
               <Link href={`/menu/${resolvedParams.merchantId}`} className="flex items-center gap-2 group">
                 <Utensils className="h-6 w-6 text-primary group-hover:text-accent transition-colors" />
                 {headerData.loading ? (
@@ -93,10 +91,9 @@ export default function PublicMenuLayout({
                   </span>
                 )}
               </Link>
-              {/* Future cart icon or other actions can go here */}
             </div>
           </header>
-          <main className="flex-1 container mx-auto py-6 px-4 md:px-6 pb-28"> 
+          <main className="flex-1 py-6 px-4 sm:px-6 lg:px-8 pb-28"> {/* Changed: Full width padding */}
             {children}
           </main>
         </div>

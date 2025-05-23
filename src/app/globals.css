@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -8,97 +9,97 @@ body {
 
 @layer base {
   :root {
-    --background: 255 60% 96%; /* Very Pale Lavender: #F2F0FA */
-    --foreground: 250 25% 18%; /* Dark Indigo: #26253D */
+    --background: 270 50% 98%; /* Very Pale Lilac */
+    --foreground: 270 20% 25%; /* Dark Slate Purple */
 
     --card: 0 0% 100%; /* White */
-    --card-foreground: 250 25% 18%;
+    --card-foreground: 270 20% 25%; /* Dark Slate Purple */
 
     --popover: 0 0% 100%;
-    --popover-foreground: 250 25% 18%;
+    --popover-foreground: 270 20% 25%; /* Dark Slate Purple */
 
-    --primary: 260 65% 55%; /* Medium Purple: #6A4DBC */
+    --primary: 270 65% 70%; /* Pale Purple */
     --primary-foreground: 0 0% 100%; /* White */
 
-    --secondary: 255 50% 92%; /* Light Lavender: #EAE8F5 */
-    --secondary-foreground: 260 65% 55%; /* Medium Purple for text on secondary */
+    --secondary: 270 60% 94%; /* Lighter Pale Purple */
+    --secondary-foreground: 270 65% 60%; /* Medium Pale Purple */
 
-    --muted: 255 50% 94%; /* Paler Lavender: #EDEBFA */
-    --muted-foreground: 250 15% 45%; /* Greyish Purple: #646279 */
+    --muted: 270 50% 96%; /* Very Light Pale Purple */
+    --muted-foreground: 270 25% 55%; /* Greyish Pale Purple */
 
-    --accent: 275 70% 60%; /* Bright Lilac/Pinkish-Purple: #A45BCC */
+    --accent: 280 70% 75%; /* Brighter Lilac */
     --accent-foreground: 0 0% 100%; /* White */
 
     --destructive: 0 72% 51%; /* Red: #E53E3E */
     --destructive-foreground: 0 0% 98%;
 
-    --border: 255 30% 88%; /* Pale Lavender Border: #DADBEE */
-    --input: 255 30% 88%;
-    --ring: 260 65% 55%; /* Primary color for rings */
+    --border: 270 40% 90%; /* Pale Lilac Border */
+    --input: 270 40% 90%; /* Pale Lilac Border */
+    --ring: 270 65% 70%; /* Primary color for rings */
 
     --radius: 0.5rem;
 
     /* Sidebar specific theme variables */
-    --sidebar-background: 255 50% 97%; /* Very Pale Lavender, almost white #F5F4FA */
-    --sidebar-foreground: 250 20% 35%; /* Muted Dark Purple #4F4C63 */
-    --sidebar-primary: 260 65% 55%; /* Primary color */
-    --sidebar-primary-foreground: 0 0% 100%; /* Primary foreground */
-    --sidebar-accent: 275 70% 60%; /* Accent color */
-    --sidebar-accent-foreground: 0 0% 100%; /* Accent foreground */
-    --sidebar-border: 255 30% 90%; /* Lighter Border for Sidebar #E2E1F0*/
-    --sidebar-ring: 260 65% 55%;
+    --sidebar-background: 270 60% 97%; /* Lighter Pale Lilac for Sidebar */
+    --sidebar-foreground: 270 20% 30%; /* Darker Slate Purple for Sidebar Text */
+    --sidebar-primary: 270 65% 70%; /* Pale Purple */
+    --sidebar-primary-foreground: 0 0% 100%; /* White */
+    --sidebar-accent: 280 70% 75%; /* Brighter Lilac */
+    --sidebar-accent-foreground: 0 0% 100%; /* White */
+    --sidebar-border: 270 40% 92%; /* Slightly Lighter Lilac Border for Sidebar */
+    --sidebar-ring: 270 65% 70%;
 
-    --chart-1: 260 65% 55%; /* Primary Purple */
-    --chart-2: 240 60% 65%; /* Cool Blue */
-    --chart-3: 280 50% 60%; /* Magenta-ish Purple */
-    --chart-4: 220 65% 70%; /* Sky Blue */
-    --chart-5: 270 40% 50%; /* Deeper Indigo/Violet */
+    --chart-1: 270 65% 70%;
+    --chart-2: 260 60% 75%;
+    --chart-3: 280 50% 70%;
+    --chart-4: 250 65% 80%;
+    --chart-5: 275 40% 60%;
   }
 
   .dark {
-    --background: 250 20% 12%; /* Very Dark Indigo: #1A1926 */
-    --foreground: 255 40% 90%; /* Light Lavender Grey: #DCD9ED */
+    --background: 270 15% 12%; /* Very Dark Purple */
+    --foreground: 270 30% 88%; /* Light Lilac Grey */
 
-    --card: 250 20% 15%; /* Darker Indigo: #1F1E2E */
-    --card-foreground: 255 40% 90%;
+    --card: 270 15% 15%; /* Darker Purple */
+    --card-foreground: 270 30% 88%; /* Light Lilac Grey */
 
-    --popover: 250 20% 12%;
-    --popover-foreground: 255 40% 90%;
+    --popover: 270 15% 12%; /* Very Dark Purple */
+    --popover-foreground: 270 30% 88%; /* Light Lilac Grey */
 
-    --primary: 265 70% 65%; /* Bright Purple: #8F6DD9 */
-    --primary-foreground: 250 100% 15%; /* Very Dark Purple for text on primary: #1C004D */
+    --primary: 270 70% 75%; /* Brighter Pale Purple (Dark Mode) */
+    --primary-foreground: 270 10% 15%; /* Very Dark Purple for text on primary */
 
-    --secondary: 250 20% 20%; /* Dark Greyish Purple: #2B2A3B */
-    --secondary-foreground: 265 70% 65%; /* Bright Purple for text on secondary */
+    --secondary: 270 15% 20%; /* Dark Greyish Purple */
+    --secondary-foreground: 270 70% 70%; /* Pale Purple for text on secondary */
 
-    --muted: 250 20% 22%; /* Slightly Lighter Dark Greyish Purple: #302F42 */
-    --muted-foreground: 255 25% 65%; /* Medium Lavender Grey: #9895AE */
+    --muted: 270 15% 22%; /* Slightly Lighter Dark Greyish Purple */
+    --muted-foreground: 270 20% 60%; /* Medium Lilac Grey */
 
-    --accent: 280 75% 70%; /* Vibrant Lilac: #C080EA */
-    --accent-foreground: 280 100% 10%; /* Very Dark Magenta for text: #36004D */
+    --accent: 280 75% 80%; /* Vibrant Lilac (Dark Mode) */
+    --accent-foreground: 280 10% 10%; /* Very Dark Magenta for text */
 
     --destructive: 0 65% 55%; /* Red: #DE5151 */
     --destructive-foreground: 0 0% 98%;
 
-    --border: 250 15% 30%; /* Dark Purple Border: #424153 */
-    --input: 250 15% 30%;
-    --ring: 265 70% 65%; /* Bright Purple for rings */
+    --border: 270 10% 30%; /* Dark Purple Border */
+    --input: 270 10% 30%; /* Dark Purple Border */
+    --ring: 270 70% 75%; /* Bright Purple for rings */
 
     /* Sidebar specific theme variables */
-    --sidebar-background: 250 20% 10%; /* Even Darker Indigo #14131E */
-    --sidebar-foreground: 255 35% 85%; /* Lighter Muted Purple #CAC6E3 */
-    --sidebar-primary: 265 70% 65%; /* Dark Mode Primary */
-    --sidebar-primary-foreground: 250 100% 15%; /* Dark Mode Primary Foreground */
-    --sidebar-accent: 280 75% 70%; /* Dark Mode Accent */
-    --sidebar-accent-foreground: 280 100% 10%; /* Dark Mode Accent Foreground */
-    --sidebar-border: 250 15% 25%; /* Darker Border #353446 */
-    --sidebar-ring: 265 70% 65%;
+    --sidebar-background: 270 15% 10%; /* Even Darker Purple for Sidebar */
+    --sidebar-foreground: 270 30% 85%; /* Lighter Lilac Grey for Sidebar Text */
+    --sidebar-primary: 270 70% 75%; /* Dark Mode Primary */
+    --sidebar-primary-foreground: 270 10% 15%; /* Dark Mode Primary Foreground */
+    --sidebar-accent: 280 75% 80%; /* Dark Mode Accent */
+    --sidebar-accent-foreground: 280 10% 10%; /* Dark Mode Accent Foreground */
+    --sidebar-border: 270 10% 25%; /* Darker Border for Sidebar */
+    --sidebar-ring: 270 70% 75%;
 
-    --chart-1: 265 70% 65%; /* Brighter Primary Purple */
-    --chart-2: 240 70% 75%; /* Brighter Cool Blue */
-    --chart-3: 280 60% 70%; /* Brighter Magenta-ish Purple */
-    --chart-4: 220 75% 80%; /* Brighter Sky Blue */
-    --chart-5: 270 50% 60%; /* Brighter Deeper Indigo/Violet */
+    --chart-1: 270 70% 75%;
+    --chart-2: 260 70% 80%;
+    --chart-3: 280 60% 75%;
+    --chart-4: 250 75% 85%;
+    --chart-5: 275 50% 70%;
   }
 }
 
