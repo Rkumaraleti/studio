@@ -1,7 +1,8 @@
 // src/app/menu/[merchantId]/layout.tsx
 "use client"; 
 
-import { useEffect } from "react"; // Added useEffect
+import { useEffect } from "react";
+import Head from "next/head"; // Import Head for meta tags
 import { AppLogo } from "@/components/common/app-logo";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/hooks/use-cart"; 
@@ -30,15 +31,13 @@ export default function PublicMenuLayout({
 
   return (
     <>
-      {/* PWA specific meta tags and links - these should ideally be in <head> of the document.
-          Next.js 13+ App Router handles <head> content in page.tsx or layout.tsx metadata object.
-          However, for manifest and dynamic theme-color, direct injection or a custom Head component might be needed.
-          For simplicity here, placing them, but review Next.js best practices for <head> management.
-          The manifest link is standard.
-      */}
-      <link rel="manifest" href="/manifest.json" />
-      <meta name="theme-color" content="#6A4DBC" /> {/* Corresponds to primary color from your theme */}
-      <link rel="apple-touch-icon" href="/apple-touch-icon.png" /> {/* You'll need to provide this icon */}
+      <Head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#6A4DBC" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" /> 
+      </Head>
       
       <div className="flex flex-col min-h-screen">
         <header className="sticky top-0 z-40 w-full border-b bg-background/90 backdrop-blur-sm">
