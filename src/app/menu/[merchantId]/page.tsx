@@ -24,12 +24,14 @@ import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase/config";
 import { collection, query, where, getDocs, orderBy, limit } from "firebase/firestore";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AppLogo } from "@/components/common/app-logo";
+
 
 // Helper to group items by category
 const groupByCategory = (items: MenuItem[]): MenuCategory[] => {
   const categories: { [key: string]: MenuItem[] } = {};
   items.forEach(item => {
-    const categoryKey = item.category || 'Uncategorized'; // Handle undefined/null categories
+    const categoryKey = item.category || 'Uncategorized';
     if (!categories[categoryKey]) {
       categories[categoryKey] = [];
     }
@@ -38,7 +40,7 @@ const groupByCategory = (items: MenuItem[]): MenuCategory[] => {
   return Object.keys(categories).sort().map(categoryName => ({
     id: categoryName.toLowerCase().replace(/\s+/g, '-'),
     name: categoryName,
-    items: categories[categoryName].sort((a,b) => (a.name || '').localeCompare(b.name || '')), // Safer sort
+    items: categories[categoryName].sort((a,b) => (a.name || '').localeCompare(b.name || '')),
   }));
 };
 
@@ -49,7 +51,7 @@ export default function MerchantMenuPage() {
   const [merchantProfile, setMerchantProfile] = useState<MerchantProfile | null>(null);
   const [menuCategories, setMenuCategories] = useState<MenuCategory[]>([]);
   
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingPage, setIsLoadingPage] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const { 
@@ -58,7 +60,8 @@ export default function MerchantMenuPage() {
     removeItem, 
     clearCart,
     getTotalItems, 
-    getTotalPrice 
+    getTotalPrice,
+    isLoadingCart, // Consumed from useCart
   } = useCart();
   const { toast } = useToast();
 
@@ -71,42 +74,41 @@ export default function MerchantMenuPage() {
     if (!publicIdFromUrl || publicIdFromUrl.trim() === "") {
       console.error("[MerchantMenuPage] Public Menu ID is missing or invalid in URL.");
       setError("Public Menu ID is missing or invalid in URL.");
-      setIsLoading(false);
+      setIsLoadingPage(false);
       return;
     }
 
     const fetchData = async () => {
       console.log("[MerchantMenuPage] fetchData called for publicId:", publicIdFromUrl);
-      setIsLoading(true);
+      setIsLoadingPage(true);
       setError(null);
-      setMerchantProfile(null); // Reset profile state
-      setMenuCategories([]);   // Reset categories state
+      setMerchantProfile(null);
+      setMenuCategories([]);
 
       try {
-        // Fetch merchant profile (for description, primarily)
         console.log("[MerchantMenuPage] Fetching merchant profile for publicId:", publicIdFromUrl);
         const merchantsCollectionRef = collection(db, "merchants");
         const merchantQuery = query(merchantsCollectionRef, where("publicMerchantId", "==", publicIdFromUrl), limit(1));
         const merchantQuerySnapshot = await getDocs(merchantQuery);
 
+        let fetchedMerchantProfile: MerchantProfile | null = null;
         if (!merchantQuerySnapshot.empty) {
           const merchantDoc = merchantQuerySnapshot.docs[0];
-          const profileData = { id: merchantDoc.id, ...merchantDoc.data() } as MerchantProfile;
-          console.log("[MerchantMenuPage] Merchant profile found:", profileData);
-          setMerchantProfile(profileData);
+          fetchedMerchantProfile = { id: merchantDoc.id, ...merchantDoc.data() } as MerchantProfile;
+          console.log("[MerchantMenuPage] Merchant profile found:", fetchedMerchantProfile);
+          setMerchantProfile(fetchedMerchantProfile);
         } else {
           console.warn("[MerchantMenuPage] Restaurant profile not found for this ID:", publicIdFromUrl);
           setError("Restaurant profile not found for this ID.");
-          setIsLoading(false);
-          return; // Stop if profile not found
+          setIsLoadingPage(false);
+          return;
         }
 
-        // Fetch menu items
         console.log("[MerchantMenuPage] Fetching menu items for merchant (publicId):", publicIdFromUrl);
         const menuItemsCollectionRef = collection(db, "menuItems");
         const itemsQuery = query(
           menuItemsCollectionRef, 
-          where("merchantId", "==", publicIdFromUrl), // This merchantId should be the publicMerchantId
+          where("merchantId", "==", publicIdFromUrl),
           orderBy("category"), 
           orderBy("name")
         );
@@ -126,8 +128,8 @@ export default function MerchantMenuPage() {
         console.error("[MerchantMenuPage] Error fetching menu data:", err);
         setError(`Could not load menu. ${err.message || 'Please try again later.'}`);
       } finally {
-        console.log("[MerchantMenuPage] fetchData finished. Setting isLoading to false.");
-        setIsLoading(false);
+        console.log("[MerchantMenuPage] fetchData finished. Setting setIsLoadingPage to false.");
+        setIsLoadingPage(false);
       }
     };
 
@@ -150,7 +152,7 @@ export default function MerchantMenuPage() {
     });
   };
   
-  if (isLoading) {
+  if (isLoadingPage) {
     return (
       <div className="space-y-8">
         <div className="text-center py-10 flex flex-col items-center justify-center">
@@ -185,15 +187,16 @@ export default function MerchantMenuPage() {
     );
   }
 
+
   return (
     <div className="space-y-6">
-      {merchantProfile?.restaurantDescription && (
-        <p className="text-xs text-muted-foreground text-center mb-4 px-2">
+       {merchantProfile?.restaurantDescription && (
+        <p className="text-xs text-muted-foreground text-center -mt-2 mb-4 px-2">
           {merchantProfile.restaurantDescription}
         </p>
        )}
-       {!merchantProfile?.restaurantDescription && !isLoading && menuCategories.length > 0 && (
-         <p className="text-xs text-muted-foreground text-center mb-4 px-2">
+       {!merchantProfile?.restaurantDescription && !isLoadingPage && menuCategories.length > 0 && (
+         <p className="text-xs text-muted-foreground text-center -mt-2 mb-4 px-2">
           Welcome! Browse our menu and add your favorites to your order.
         </p>
        )}
@@ -234,13 +237,18 @@ export default function MerchantMenuPage() {
         </section>
       ))}
 
-      {/* Sticky Bottom Bar - Always visible if cart has items, or shows cart is empty */}
+      {/* Sticky Bottom Bar - Always visible */}
       <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border shadow-lg p-4 z-50">
         <div className="container mx-auto flex items-center justify-between gap-4">
           <Sheet>
             <SheetTrigger asChild>
               <div className="flex-grow cursor-pointer flex items-center group">
-                {cartItems.length > 0 ? (
+                {isLoadingCart ? (
+                  <div className="flex items-center">
+                     <Loader2 className="mr-2 h-5 w-5 animate-spin text-primary" />
+                     <p className="text-md font-semibold group-hover:text-primary transition-colors">Loading cart...</p>
+                  </div>
+                ) : cartItems.length > 0 ? (
                   <div>
                     <p className="text-md font-semibold group-hover:text-primary transition-colors">
                       {totalCartItems} item{totalCartItems !== 1 ? 's' : ''} in cart
@@ -270,7 +278,12 @@ export default function MerchantMenuPage() {
               </SheetHeader>
               <ScrollArea className="flex-grow">
                 <div className="p-4 space-y-4">
-                  {cartItems.length > 0 ? (
+                  {isLoadingCart ? (
+                     <div className="flex justify-center items-center py-8">
+                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        <p className="ml-3 text-md">Loading cart items...</p>
+                      </div>
+                  ) : cartItems.length > 0 ? (
                     cartItems.map((cartItemEntry) => (
                       <div key={cartItemEntry.id} className="flex items-start gap-4 p-3 border rounded-lg bg-card hover:shadow-md transition-shadow">
                         {cartItemEntry.imageUrl ? (
@@ -297,6 +310,7 @@ export default function MerchantMenuPage() {
                               className="h-7 w-7"
                               onClick={() => cartItemEntry.quantity > 1 ? updateQuantity(cartItemEntry.id, cartItemEntry.quantity - 1) : removeItem(cartItemEntry.id)}
                               aria-label="Decrease quantity"
+                              disabled={isLoadingCart}
                             >
                               <MinusCircle className="h-4 w-4" />
                             </Button>
@@ -307,6 +321,7 @@ export default function MerchantMenuPage() {
                               className="h-7 w-7"
                               onClick={() => updateQuantity(cartItemEntry.id, cartItemEntry.quantity + 1)}
                               aria-label="Increase quantity"
+                              disabled={isLoadingCart}
                             >
                               <PlusCircle className="h-4 w-4" />
                             </Button>
@@ -320,6 +335,7 @@ export default function MerchantMenuPage() {
                               className="text-muted-foreground hover:text-destructive h-7 w-7 mt-1"
                               onClick={() => removeItem(cartItemEntry.id)}
                               aria-label="Remove item"
+                              disabled={isLoadingCart}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -331,7 +347,7 @@ export default function MerchantMenuPage() {
                   )}
                 </div>
               </ScrollArea>
-              {cartItems.length > 0 && (
+              {cartItems.length > 0 && !isLoadingCart && (
                 <SheetFooter className="p-4 border-t bg-background">
                   <Button variant="outline" onClick={clearCart} className="w-full">
                     Clear Cart
@@ -344,19 +360,23 @@ export default function MerchantMenuPage() {
           <Button 
             onClick={handleProceedToCheckout} 
             size="lg"
-            className="bg-accent hover:bg-accent/90 text-accent-foreground min-w-[140px]" // Reduced min-width
-            disabled={totalCartItems === 0}
+            className="bg-accent hover:bg-accent/90 text-accent-foreground min-w-[140px]"
+            disabled={totalCartItems === 0 || isLoadingCart}
           >
-            <CreditCard className="mr-2 h-5 w-5" />
+            {isLoadingCart ? (
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+            ) : (
+              <CreditCard className="mr-2 h-5 w-5" />
+            )}
             Pay ${totalCartPrice.toFixed(2)}
           </Button>
         </div>
       </div>
       
-      <footer className="py-6 md:px-6 md:py-0 border-t mt-12">
+       <footer className="py-6 md:px-6 md:py-0 border-t mt-12">
           <div className="container mx-auto flex flex-col items-center justify-between gap-4 md:h-20 md:flex-row">
             <div className="text-balance text-center text-sm leading-loose text-muted-foreground md:text-left">
-               Powered by QR Plus.
+              Powered by QR Plus
             </div>
             <p className="text-sm text-muted-foreground">
               &copy; {new Date().getFullYear()} {merchantProfile?.restaurantName || "Your Restaurant"}. All Rights Reserved.
