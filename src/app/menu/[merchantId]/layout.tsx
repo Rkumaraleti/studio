@@ -4,11 +4,8 @@
 import { useEffect } from "react";
 import Head from "next/head"; // Import Head for meta tags
 import { AppLogo } from "@/components/common/app-logo";
-import { Button } from "@/components/ui/button";
-import { useCart } from "@/hooks/use-cart"; 
-import { ShoppingCart } from "lucide-react";
+// Removed: Button, useCart, ShoppingCart, CartSidebar
 import Link from "next/link";
-import { CartSidebar } from "./components/cart-sidebar";
 
 export default function PublicMenuLayout({
   children,
@@ -17,13 +14,12 @@ export default function PublicMenuLayout({
   children: React.ReactNode;
   params: { merchantId: string };
 }) {
-  const { getTotalItems, toggleCart } = useCart();
-  const totalItems = getTotalItems();
+  // Removed: useCart logic for totalItems and toggleCart
 
   useEffect(() => {
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker
-        .register('/sw.js', { scope: '/menu/' }) // Ensure scope matches manifest
+        .register('/sw.js', { scope: '/menu/' }) 
         .then((registration) => console.log('Service Worker registered with scope:', registration.scope))
         .catch((error) => console.error('Service Worker registration failed:', error));
     }
@@ -37,6 +33,7 @@ export default function PublicMenuLayout({
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" /> 
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
       </Head>
       
       <div className="flex flex-col min-h-screen">
@@ -45,31 +42,15 @@ export default function PublicMenuLayout({
             <Link href="/">
               <AppLogo />
             </Link>
-            <Button variant="ghost" onClick={toggleCart} className="relative">
-              <ShoppingCart className="h-6 w-6" />
-              {totalItems > 0 && (
-                <span className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
-                  {totalItems}
-                </span>
-              )}
-              <span className="sr-only">Open cart</span>
-            </Button>
+            {/* Removed Cart Icon Button */}
           </div>
         </header>
-        <main className="flex-1 container mx-auto py-8 px-4 md:px-6">
+        {/* Added pb-28 to main to account for sticky footer height */}
+        <main className="flex-1 container mx-auto py-8 px-4 md:px-6 pb-28"> 
           {children}
         </main>
-        <footer className="py-6 md:px-6 md:py-0 border-t">
-          <div className="container mx-auto flex flex-col items-center justify-between gap-4 md:h-20 md:flex-row">
-            <p className="text-balance text-center text-sm leading-loose text-muted-foreground md:text-left">
-              Powered by <AppLogo showText={false} size={16} className="inline-block align-middle" /> QR Plus.
-            </p>
-            <p className="text-sm text-muted-foreground">
-              &copy; {new Date().getFullYear()} Restaurant Name. All Rights Reserved.
-            </p>
-          </div>
-        </footer>
-        <CartSidebar />
+        {/* Footer is now part of page.tsx to handle sticky payment bar */}
+        {/* Removed <CartSidebar /> */}
       </div>
     </>
   );
