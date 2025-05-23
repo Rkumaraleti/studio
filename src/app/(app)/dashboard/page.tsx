@@ -4,7 +4,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { ClipboardList, QrCode, UserCircle, DollarSign, BarChart3, Star, ListChecks, Loader2 } from "lucide-react";
+import { ClipboardList, QrCode, UserCircle, DollarSign, ListChecks, Loader2, Star } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useMerchantProfile } from "@/hooks/use-merchant-profile";
 import { db } from "@/lib/firebase/config";
@@ -14,7 +14,7 @@ import { useEffect, useState } from "react";
 interface DashboardStats {
   todaysOrders: number | null;
   totalMenuItems: number | null;
-  averageRating: string; // Keeping static for now
+  averageRating: string;
 }
 
 export default function DashboardPage() {
@@ -26,6 +26,8 @@ export default function DashboardPage() {
     averageRating: "4.5", // Static for now
   });
   const [isLoadingStats, setIsLoadingStats] = useState(true);
+  const [errorFetchingStats, setErrorFetchingStats] = useState<string | null>(null);
+
 
   useEffect(() => {
     if (!publicMerchantId || authLoading || isLoadingProfile) {
@@ -35,20 +37,27 @@ export default function DashboardPage() {
 
     const fetchDashboardData = async () => {
       setIsLoadingStats(true);
+      setErrorFetchingStats(null);
       try {
         // Fetch today's orders
         const today = new Date();
         const startOfToday = new Date(today.setHours(0, 0, 0, 0));
         const endOfToday = new Date(today.setHours(23, 59, 59, 999));
 
+        const startOfTodayTimestamp = Timestamp.fromDate(startOfToday);
+        const endOfTodayTimestamp = Timestamp.fromDate(endOfToday);
+        
+        console.log("[Dashboard] Fetching orders for merchant:", publicMerchantId, "between", startOfToday, "and", endOfToday);
+
         const ordersQuery = query(
           collection(db, "orders"),
           where("merchantPublicId", "==", publicMerchantId),
-          where("createdAt", ">=", Timestamp.fromDate(startOfToday)),
-          where("createdAt", "<=", Timestamp.fromDate(endOfToday))
+          where("createdAt", ">=", startOfTodayTimestamp),
+          where("createdAt", "<=", endOfTodayTimestamp)
         );
         const ordersSnapshot = await getCountFromServer(ordersQuery);
         const todaysOrdersCount = ordersSnapshot.data().count;
+        console.log("[Dashboard] Today's orders count:", todaysOrdersCount);
 
         // Fetch total menu items
         const menuItemsQuery = query(
@@ -57,6 +66,7 @@ export default function DashboardPage() {
         );
         const menuItemsSnapshot = await getCountFromServer(menuItemsQuery);
         const totalMenuItemsCount = menuItemsSnapshot.data().count;
+        console.log("[Dashboard] Total menu items count:", totalMenuItemsCount);
 
         setStats(prev => ({
           ...prev,
@@ -64,12 +74,13 @@ export default function DashboardPage() {
           totalMenuItems: totalMenuItemsCount,
         }));
 
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error fetching dashboard data:", error);
+        setErrorFetchingStats(error.message || "Failed to load dashboard statistics.");
         setStats(prev => ({
           ...prev,
-          todaysOrders: 0, // Default to 0 on error
-          totalMenuItems: 0, // Default to 0 on error
+          todaysOrders: 0, 
+          totalMenuItems: 0, 
         }));
       } finally {
         setIsLoadingStats(false);
@@ -81,32 +92,32 @@ export default function DashboardPage() {
 
   const quickActions = [
     { title: "Manage Menu", description: "Add or update your menu items.", href: "/menu-builder", icon: ClipboardList, color: "text-primary" },
-    { title: "View QR Code", description: "Get your scannable menu QR code.", href: "/qr-code", icon: QrCode, color: "text-green-500" }, // Kept green for QR
-    { title: "Edit Profile", description: "Update your restaurant details.", href: "/profile", icon: UserCircle, color: "text-accent" },
+    { title: "View QR Code", description: "Get your scannable menu QR code.", href: "/qr-code", icon: QrCode, color: "text-accent" },
+    { title: "Edit Profile", description: "Update your restaurant details.", href: "/profile", icon: UserCircle, color: "text-secondary-foreground" },
   ];
 
   const displayStats = [
-    { title: "Today's Orders", value: stats.todaysOrders, icon: DollarSign, color: "text-primary" },
-    { title: "Total Menu Items", value: stats.totalMenuItems, icon: ListChecks, color: "text-blue-500" }, // Changed icon & color
-    { title: "Average Rating", value: stats.averageRating, icon: Star, color: "text-accent" },
+    { title: "Today's Orders", value: stats.todaysOrders, icon: DollarSign, color: "text-primary", note: "Orders received since midnight" },
+    { title: "Total Menu Items", value: stats.totalMenuItems, icon: ListChecks, color: "text-blue-500", note: "Current items in your menu"},
+    { title: "Average Rating", value: stats.averageRating, icon: Star, color: "text-accent", note: "Feature coming soon" },
   ];
 
   return (
     <div className="space-y-8">
-      <Card className="shadow-lg bg-gradient-to-br from-card via-card to-secondary/10">
-        <CardHeader className="bg-primary/5 dark:bg-primary/10 rounded-t-lg">
+      <Card className="shadow-lg bg-gradient-to-br from-card via-card to-secondary/10 border-border">
+        <CardHeader className="bg-primary/5 dark:bg-primary/10 rounded-t-lg p-6">
           <CardTitle className="text-3xl text-primary">Welcome Back, Merchant!</CardTitle>
           <CardDescription className="text-muted-foreground">Here's what's happening with your QR Plus menu today.</CardDescription>
         </CardHeader>
       </Card>
 
       <section>
-        <h2 className="text-2xl font-semibold mb-4 text-primary">Quick Actions</h2>
+        <h2 className="text-2xl font-semibold mb-4 text-foreground">Quick Actions</h2>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {quickActions.map((action) => (
-            <Card key={action.title} className="hover:shadow-xl transition-shadow duration-300">
+            <Card key={action.title} className="hover:shadow-xl transition-shadow duration-300 border-border">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-xl font-medium">{action.title}</CardTitle>
+                <CardTitle className="text-lg font-medium">{action.title}</CardTitle>
                 <action.icon className={`h-6 w-6 ${action.color}`} />
               </CardHeader>
               <CardContent>
@@ -121,10 +132,10 @@ export default function DashboardPage() {
       </section>
       
       <section>
-        <h2 className="text-2xl font-semibold mb-4 text-primary">At a Glance</h2>
+        <h2 className="text-2xl font-semibold mb-4 text-foreground">At a Glance</h2>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {displayStats.map((stat) => (
-            <Card key={stat.title} className="hover:shadow-lg transition-shadow duration-300">
+            <Card key={stat.title} className="hover:shadow-lg transition-shadow duration-300 border-border">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-lg font-medium">{stat.title}</CardTitle>
                 <stat.icon className={`h-5 w-5 ${stat.color}`} />
@@ -138,11 +149,11 @@ export default function DashboardPage() {
                 ) : (
                   <div className="text-3xl font-bold text-foreground">{stat.value}</div>
                 )}
-                {stat.title === "Total Menu Items" && !isLoadingStats && (
-                  <p className="text-xs text-muted-foreground mt-1">Represents current item count</p>
+                {!isLoadingStats && stat.note && (
+                  <p className="text-xs text-muted-foreground mt-1">{stat.note}</p>
                 )}
-                 {stat.title === "Average Rating" && !isLoadingStats && (
-                  <p className="text-xs text-muted-foreground mt-1">Static display for now</p>
+                {errorFetchingStats && (stat.title === "Today's Orders" || stat.title === "Total Menu Items") && (
+                   <p className="text-xs text-destructive mt-1">Could not load. Index might be building.</p>
                 )}
               </CardContent>
             </Card>
