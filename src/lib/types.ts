@@ -8,7 +8,7 @@ export interface MenuItem {
   category: string;
   imageUrl?: string;
   aiSuggestions?: string[];
-  dataAiHint?: string; 
+  dataAiHint?: string;
   createdAt?: any; // Firestore Timestamp or serverTimestamp() placeholder
   updatedAt?: any; // Firestore Timestamp or serverTimestamp() placeholder
 }
@@ -23,25 +23,28 @@ export interface CartItem extends MenuItem {
   quantity: number;
 }
 
-export interface Order {
-  id: string; // Firestore document ID
-  items: CartItem[];
-  totalAmount: number;
-  status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
-  timestamp: any; // Firestore Timestamp
-  merchantId: string; // This will also store the publicMerchantId
-  customerId?: string; // Optional: if you have customer accounts
-}
-
 export interface MerchantProfile {
   id: string; // Firebase UID, this IS the document ID in 'merchants' collection
   publicMerchantId: string; // The new publicly shareable, generated merchant ID
   restaurantName: string;
   restaurantDescription?: string; // Optional description for the restaurant
-  paymentGatewayConfigured: boolean; 
+  paymentGatewayConfigured: boolean;
   paymentGatewayAccountId?: string;
   currency: string; // e.g., "USD"
   createdAt?: any; // Firestore Timestamp
   updatedAt?: any; // Firestore Timestamp
 }
 
+export type OrderStatus = 'pending' | 'paid' | 'confirmed' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
+
+export interface Order {
+  id: string; // Firestore document ID (auto-generated)
+  displayOrderId: string; // User-friendly Order ID (e.g., ORD-AB12CD)
+  customerUid: string; // UID of the customer (can be anonymous)
+  merchantPublicId: string; // The public ID of the merchant
+  items: CartItem[];
+  totalAmount: number;
+  status: OrderStatus;
+  createdAt: any; // Firestore serverTimestamp
+  updatedAt: any; // Firestore serverTimestamp
+}

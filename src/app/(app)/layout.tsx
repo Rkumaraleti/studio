@@ -9,6 +9,7 @@ import {
   QrCode as QrCodeIcon,
   Settings,
   PanelLeft,
+  ShoppingBag, // Added ShoppingBag icon
 } from "lucide-react"
 
 import {
@@ -27,33 +28,31 @@ import {
 import { AppLogo } from "@/components/common/app-logo"
 import { UserNav } from "@/components/common/user-nav"
 import { Button } from "@/components/ui/button"
-import { usePathname, useRouter } from "next/navigation" // Added useRouter
+import { usePathname, useRouter } from "next/navigation"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { useAuth } from "@/contexts/auth-context" // Import useAuth
-import { useEffect } from "react" // Import useEffect
-import { Loader2 } from "lucide-react" // For loading state
+import { useAuth } from "@/contexts/auth-context"
+import { useEffect } from "react"
+import { Loader2 } from "lucide-react"
 
 const navItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/menu-builder", icon: ClipboardList, label: "Menu Builder" },
+  { href: "/orders", icon: ShoppingBag, label: "Orders" }, // Added Orders link
   { href: "/qr-code", icon: QrCodeIcon, label: "QR Code" },
   { href: "/profile", icon: UserCircle, label: "Profile" },
 ]
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { user, loading } = useAuth(); // Get user and loading state
+  const { user, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    // If loading is finished and there's no user, redirect to login
-    // This check is a safeguard and might be redundant if AuthProvider handles it robustly
     if (!loading && !user) {
       router.replace("/login");
     }
   }, [user, loading, router]);
 
-  // Show a loading spinner while checking auth state if user is not yet determined
   if (loading) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-background">
@@ -62,8 +61,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     );
   }
   
-  // If there's no user after loading, children won't render due to redirect.
-  // This check prevents flashing the layout briefly.
   if (!user) {
     return null; 
   }

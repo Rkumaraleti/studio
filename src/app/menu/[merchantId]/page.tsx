@@ -4,7 +4,7 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import type { MenuItem, MenuCategory, MerchantProfile } from "@/lib/types";
+import type { MenuItem, MenuCategory, MerchantProfile, Order } from "@/lib/types";
 import { MenuDisplayItem } from "./components/menu-display-item";
 import { useParams } from "next/navigation";
 import { UtensilsCrossed, Info, ShoppingBag, AlertTriangle, Loader2, Trash2, PlusCircle, MinusCircle, CreditCard, ShoppingCart, ChevronUp } from "lucide-react";
@@ -17,15 +17,14 @@ import {
   SheetTitle,
   SheetTrigger,
   SheetFooter,
+  SheetClose,
 } from "@/components/ui/sheet";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { useCart } from "@/hooks/use-cart";
 import { useToast } from "@/hooks/use-toast";
-import { db } from "@/lib/firebase/config";
-import { collection, query, where, getDocs, orderBy, limit } from "firebase/firestore";
+import { db, auth } from "@/lib/firebase/config"; // Import auth
+import { collection, query, where, getDocs, orderBy, limit, addDoc, serverTimestamp } from "firebase/firestore";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AppLogo } from "@/components/common/app-logo";
-
 
 // Helper to group items by category
 const groupByCategory = (items: MenuItem[]): MenuCategory[] => {
@@ -44,6 +43,14 @@ const groupByCategory = (items: MenuItem[]): MenuCategory[] => {
   }));
 };
 
+// Helper to generate a user-friendly Order ID
+const generateDisplayOrderId = () => {
+  const prefix = "ORD";
+  const randomPart = Math.random().toString(36).substring(2, 8).toUpperCase();
+  return `${prefix}-${randomPart}`;
+};
+
+
 export default function MerchantMenuPage() {
   const params = useParams();
   const publicIdFromUrl = params.merchantId as string;
@@ -53,6 +60,7 @@ export default function MerchantMenuPage() {
   
   const [isLoadingPage, setIsLoadingPage] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
 
   const { 
     items: cartItems, 
@@ -61,7 +69,7 @@ export default function MerchantMenuPage() {
     clearCart,
     getTotalItems, 
     getTotalPrice,
-    isLoadingCart, // Consumed from useCart
+    isLoadingCart,
   } = useCart();
   const { toast } = useToast();
 
@@ -91,10 +99,9 @@ export default function MerchantMenuPage() {
         const merchantQuery = query(merchantsCollectionRef, where("publicMerchantId", "==", publicIdFromUrl), limit(1));
         const merchantQuerySnapshot = await getDocs(merchantQuery);
 
-        let fetchedMerchantProfile: MerchantProfile | null = null;
         if (!merchantQuerySnapshot.empty) {
           const merchantDoc = merchantQuerySnapshot.docs[0];
-          fetchedMerchantProfile = { id: merchantDoc.id, ...merchantDoc.data() } as MerchantProfile;
+          const fetchedMerchantProfile = { id: merchantDoc.id, ...merchantDoc.data() } as MerchantProfile;
           console.log("[MerchantMenuPage] Merchant profile found:", fetchedMerchantProfile);
           setMerchantProfile(fetchedMerchantProfile);
         } else {
@@ -118,7 +125,7 @@ export default function MerchantMenuPage() {
         itemsQuerySnapshot.forEach((doc) => {
           fetchedItems.push({ id: doc.id, ...doc.data() } as MenuItem);
         });
-        console.log(`[MerchantMenuPage] Fetched ${fetchedItems.length} raw menu items:`, fetchedItems);
+        console.log(`[MerchantMenuPage] Fetched ${fetchedItems.length} raw menu items.`);
 
         const groupedCategories = groupByCategory(fetchedItems);
         console.log("[MerchantMenuPage] Menu items grouped by category:", groupedCategories);
@@ -136,7 +143,7 @@ export default function MerchantMenuPage() {
     fetchData();
   }, [publicIdFromUrl]);
 
-  const handleProceedToCheckout = () => {
+  const handleProceedToCheckout = async () => {
     if (totalCartItems === 0) {
       toast({
         title: "Cart is Empty",
@@ -145,11 +152,56 @@ export default function MerchantMenuPage() {
       });
       return;
     }
-    toast({
-      title: "Proceeding to Payment (Demo)",
-      description: `You would now be redirected to a payment gateway to pay $${totalCartPrice.toFixed(2)}. This is a demo.`,
-      duration: 5000,
-    });
+    if (!auth.currentUser) {
+        toast({
+            title: "Authentication Error",
+            description: "Could not identify user for order. Please refresh.",
+            variant: "destructive",
+        });
+        return;
+    }
+
+    setIsSubmittingOrder(true);
+    const displayOrderId = generateDisplayOrderId();
+    const orderData: Omit<Order, 'id' | 'createdAt' | 'updatedAt'> = {
+      displayOrderId,
+      customerUid: auth.currentUser.uid,
+      merchantPublicId: publicIdFromUrl,
+      items: cartItems,
+      totalAmount: totalCartPrice,
+      status: 'paid', // Initial status, assuming payment gateway handles this
+    };
+
+    try {
+      const ordersCollectionRef = collection(db, "orders");
+      await addDoc(ordersCollectionRef, {
+        ...orderData,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+
+      toast({
+        title: "Order Placed Successfully!",
+        description: `Your Order ID is: ${displayOrderId}. Thank you!`,
+        duration: 10000, // Longer duration to see ID
+      });
+      clearCart();
+      // Attempt to close the window/tab
+      // Note: This might not work in all browsers or if the tab wasn't opened by script.
+      setTimeout(() => {
+        window.close();
+      }, 2000); // Short delay to allow toast to be seen
+
+    } catch (error: any) {
+      console.error("Error placing order:", error);
+      toast({
+        title: "Order Placement Failed",
+        description: `Could not place your order. ${error.message || 'Please try again.'}`,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmittingOrder(false);
+    }
   };
   
   if (isLoadingPage) {
@@ -186,7 +238,6 @@ export default function MerchantMenuPage() {
       </div>
     );
   }
-
 
   return (
     <div className="space-y-6">
@@ -238,7 +289,7 @@ export default function MerchantMenuPage() {
       ))}
 
       {/* Sticky Bottom Bar - Always visible */}
-      <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border shadow-lg p-4 z-50">
+       <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border shadow-lg p-4 z-50">
         <div className="container mx-auto flex items-center justify-between gap-4">
           <Sheet>
             <SheetTrigger asChild>
@@ -349,9 +400,11 @@ export default function MerchantMenuPage() {
               </ScrollArea>
               {cartItems.length > 0 && !isLoadingCart && (
                 <SheetFooter className="p-4 border-t bg-background">
-                  <Button variant="outline" onClick={clearCart} className="w-full">
-                    Clear Cart
-                  </Button>
+                  <SheetClose asChild>
+                    <Button variant="outline" onClick={clearCart} className="w-full sm:w-auto">
+                      Clear Cart
+                    </Button>
+                  </SheetClose>
                 </SheetFooter>
               )}
             </SheetContent>
@@ -361,9 +414,9 @@ export default function MerchantMenuPage() {
             onClick={handleProceedToCheckout} 
             size="lg"
             className="bg-accent hover:bg-accent/90 text-accent-foreground min-w-[140px]"
-            disabled={totalCartItems === 0 || isLoadingCart}
+            disabled={totalCartItems === 0 || isLoadingCart || isSubmittingOrder}
           >
-            {isLoadingCart ? (
+            {isSubmittingOrder ? (
               <Loader2 className="mr-2 h-5 w-5 animate-spin" />
             ) : (
               <CreditCard className="mr-2 h-5 w-5" />
@@ -386,4 +439,3 @@ export default function MerchantMenuPage() {
     </div>
   );
 }
-
