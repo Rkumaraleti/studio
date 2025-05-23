@@ -14,24 +14,24 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useAuth } from "@/contexts/auth-context";
 import { useMerchantProfile } from "@/hooks/use-merchant-profile";
 import { db } from "@/lib/firebase/config";
-import { 
-  collection, 
-  query, 
-  where, 
-  onSnapshot, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
+import {
+  collection,
+  query,
+  where,
+  onSnapshot,
+  addDoc,
+  updateDoc,
+  deleteDoc,
   doc,
   serverTimestamp,
-  orderBy
+  orderBy // Ensure orderBy is imported
 } from "firebase/firestore";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 
 
 export default function MenuBuilderPage() {
   const { user, loading: authLoading } = useAuth();
-  const { publicMerchantId, isLoadingProfile: isLoadingMerchantProfile } = useMerchantProfile(); 
+  const { publicMerchantId, isLoadingProfile: isLoadingMerchantProfile } = useMerchantProfile();
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [editingItem, setEditingItem] = useState<MenuItem | undefined>(undefined);
   const { toast } = useToast();
@@ -59,11 +59,13 @@ export default function MenuBuilderPage() {
     setIsLoadingItems(true);
     const menuItemsCollectionRef = collection(db, "menuItems");
     const q = query(
-      menuItemsCollectionRef, 
+      menuItemsCollectionRef,
       where("merchantId", "==", publicMerchantId),
-      orderBy("createdAt", "desc")
+      orderBy("category"), // Changed: Order by category
+      orderBy("name")      // Changed: Then by name
     );
 
+    console.log("[MenuBuilderPage] Subscribing to menu items for merchant:", publicMerchantId);
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const items: MenuItem[] = [];
       querySnapshot.forEach((doc) => {
@@ -71,13 +73,17 @@ export default function MenuBuilderPage() {
       });
       setMenuItems(items);
       setIsLoadingItems(false);
+      console.log(`[MenuBuilderPage] Received ${items.length} menu items.`);
     }, (error) => {
-      console.error("Error fetching menu items:", error);
-      toast({ title: "Error", description: "Could not fetch menu items.", variant: "destructive" });
+      console.error("[MenuBuilderPage] Error fetching menu items:", error);
+      toast({ title: "Error", description: `Could not fetch menu items. ${error.message}`, variant: "destructive" });
       setIsLoadingItems(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      console.log("[MenuBuilderPage] Unsubscribing from menu items.");
+      unsubscribe();
+    };
   }, [user, authLoading, publicMerchantId, isLoadingMerchantProfile, toast]);
 
   const handleAddItem = async (data: Omit<MenuItem, 'id' | 'merchantId' | 'createdAt' | 'updatedAt'>) => {
@@ -89,30 +95,31 @@ export default function MenuBuilderPage() {
     try {
       if (editingItem) {
         const itemDocRef = doc(db, "menuItems", editingItem.id);
-        const { merchantId: currentItemMerchantId, ...restOfData } = data as any; 
+        // Ensure merchantId is not part of the data being updated directly if it's derived
+        const { merchantId: currentItemMerchantId, ...restOfData } = data as any;
         const updatedData = {
             ...restOfData,
-            merchantId: publicMerchantId,
-            updatedAt: serverTimestamp() 
+            merchantId: publicMerchantId, // Ensure correct merchantId is set
+            updatedAt: serverTimestamp()
         };
-        console.log("Attempting to update item:", editingItem.id, updatedData);
+        console.log("[MenuBuilderPage] Attempting to update item:", editingItem.id, "with data:", updatedData);
         await updateDoc(itemDocRef, updatedData);
         toast({ title: "Item Updated", description: `${data.name} has been updated successfully.` });
         setEditingItem(undefined);
       } else {
-        const newItemData: Omit<MenuItem, 'id'> = { 
+        const newItemData: Omit<MenuItem, 'id'> = {
           ...data,
           merchantId: publicMerchantId,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         };
-        console.log("Attempting to add new item:", newItemData);
+        console.log("[MenuBuilderPage] Attempting to add new item with data:", newItemData);
         const docRef = await addDoc(collection(db, "menuItems"), newItemData);
-        console.log("Item added with ID:", docRef.id);
+        console.log("[MenuBuilderPage] Item added with ID:", docRef.id);
         toast({ title: "Item Added", description: `${data.name} has been added to your menu.` });
       }
-    } catch (error) {
-      console.error("Error saving menu item:", error);
+    } catch (error: any) {
+      console.error("[MenuBuilderPage] Error saving menu item:", error);
       let description = "Could not save menu item.";
       if (error instanceof Error) {
         description += ` Details: ${error.message}`;
@@ -132,14 +139,14 @@ export default function MenuBuilderPage() {
       return;
     }
     try {
-      console.log("Attempting to delete item:", itemId);
+      console.log("[MenuBuilderPage] Attempting to delete item:", itemId);
       await deleteDoc(doc(db, "menuItems", itemId));
       toast({ title: "Item Deleted", description: "The menu item has been removed." });
       if (editingItem?.id === itemId) {
         setEditingItem(undefined);
       }
-    } catch (error) {
-      console.error("Error deleting menu item:", error);
+    } catch (error: any) {
+      console.error("[MenuBuilderPage] Error deleting menu item:", error);
       let description = "Could not delete menu item.";
       if (error instanceof Error) {
         description += ` Details: ${error.message}`;
@@ -171,7 +178,7 @@ export default function MenuBuilderPage() {
       </div>
      )
   }
-  
+
   if (user && !publicMerchantId && !isLoadingMerchantProfile) {
     return (
       <div className="space-y-8 text-center">
@@ -225,7 +232,7 @@ export default function MenuBuilderPage() {
             <Info className="h-4 w-4" />
             <AlertTitle>Your menu is empty!</AlertTitle>
             <AlertDescription>
-              Start by adding your first menu item using the form above. 
+              Start by adding your first menu item using the form above.
               You can add dishes, drinks, desserts, and more.
             </AlertDescription>
           </Alert>
@@ -264,7 +271,7 @@ export default function MenuBuilderPage() {
                       src={previewMenuUrl}
                       title="Menu Preview"
                       className="w-full h-full border-0 rounded-md bg-background"
-                      sandbox="allow-scripts allow-same-origin" 
+                      sandbox="allow-scripts allow-same-origin"
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-background rounded-md">
