@@ -141,10 +141,10 @@ export default function MerchantMenuPage() {
   if (isLoading) {
     return (
       <div className="space-y-12">
-        <div className="text-center border-b pb-6 pt-4">
-          <Skeleton className="w-24 h-24 object-cover rounded-lg mb-4 shadow-md mx-auto" />
-          <Skeleton className="h-8 w-1/2 sm:w-1/3 mx-auto mb-2" />
-          <Skeleton className="h-5 w-full max-w-xs mx-auto" />
+        <div className="text-center border-b pb-4 pt-2">
+          <Skeleton className="w-16 h-16 object-cover rounded-lg mb-2 shadow-sm mx-auto" />
+          <Skeleton className="h-6 w-1/3 sm:w-1/4 mx-auto mb-1" />
+          <Skeleton className="h-4 w-full max-w-xs mx-auto" />
         </div>
         <div className="text-center py-10 flex flex-col items-center justify-center">
           <Loader2 className="h-16 w-16 text-primary animate-spin mb-4" />
@@ -168,22 +168,22 @@ export default function MerchantMenuPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <div className="text-center border-b pb-6 pt-4">
+    <div className="space-y-6">
+      <div className="text-center border-b pb-4 pt-2">
         <Image 
-            src={`https://placehold.co/100x100.png`} 
+            src={`https://placehold.co/64x64.png`} 
             alt={`${restaurantName} Logo`}
-            width={100} 
-            height={100} 
-            className="w-24 h-24 object-cover rounded-lg mb-4 shadow-md mx-auto" 
-            data-ai-hint="restaurant logo"
+            width={64} 
+            height={64} 
+            className="w-16 h-16 object-cover rounded-lg mb-2 shadow-sm mx-auto" 
+            data-ai-hint="restaurant icon"
             priority 
         />
-        <h1 className="text-3xl font-bold tracking-tight text-primary sm:text-4xl mb-1">
+        <h1 className="text-xl font-semibold tracking-tight text-primary mb-0.5">
           {restaurantName}
         </h1>
-        <p className="max-w-lg mx-auto text-md text-muted-foreground">
-          Browse our delicious offerings and add your favorites to the cart.
+        <p className="max-w-md mx-auto text-xs text-muted-foreground">
+          Browse our offerings and add your favorites to your order.
         </p>
       </div>
 
@@ -199,7 +199,7 @@ export default function MerchantMenuPage() {
 
       {menuCategories.map((category) => (
         <section key={category.id} className="scroll-mt-20" id={category.id}>
-          <h2 className="text-2xl font-semibold text-primary mb-4 pb-2 border-b-2 border-primary/30">
+          <h2 className="text-xl font-semibold text-primary mb-3 pb-1 border-b-2 border-primary/20">
             {category.name}
           </h2>
           {category.items.length > 0 ? (
@@ -231,19 +231,19 @@ export default function MerchantMenuPage() {
               <div className="flex-grow cursor-pointer flex items-center group">
                 {cartItems.length > 0 ? (
                   <div>
-                    <p className="text-lg font-semibold group-hover:text-primary transition-colors">
+                    <p className="text-md font-semibold group-hover:text-primary transition-colors">
                       {totalCartItems} item{totalCartItems !== 1 ? 's' : ''} in cart
                     </p>
-                    <p className="text-sm text-muted-foreground group-hover:text-primary transition-colors">
+                    <p className="text-xs text-muted-foreground group-hover:text-primary transition-colors">
                       Total: <span className="font-bold text-primary">${totalCartPrice.toFixed(2)}</span>
                     </p>
                   </div>
                 ) : (
                   <div>
-                    <p className="text-lg font-semibold group-hover:text-primary transition-colors">
+                    <p className="text-md font-semibold group-hover:text-primary transition-colors">
                       Your Order
                     </p>
-                    <p className="text-sm text-muted-foreground group-hover:text-primary transition-colors">
+                    <p className="text-xs text-muted-foreground group-hover:text-primary transition-colors">
                       Cart is empty
                     </p>
                   </div>
@@ -333,7 +333,7 @@ export default function MerchantMenuPage() {
           <Button 
             onClick={handleProceedToCheckout} 
             size="lg"
-            className="bg-accent hover:bg-accent/90 text-accent-foreground min-w-[180px]"
+            className="bg-accent hover:bg-accent/90 text-accent-foreground min-w-[160px]" // Slightly reduced min-width
             disabled={totalCartItems === 0}
           >
             <CreditCard className="mr-2 h-5 w-5" />
