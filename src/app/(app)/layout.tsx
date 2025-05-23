@@ -9,7 +9,7 @@ import {
   QrCode as QrCodeIcon,
   Settings,
   PanelLeft,
-  ShoppingBag, // Added ShoppingBag icon
+  ShoppingBag,
 } from "lucide-react"
 
 import {
@@ -37,7 +37,7 @@ import { Loader2 } from "lucide-react"
 const navItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/menu-builder", icon: ClipboardList, label: "Menu Builder" },
-  { href: "/orders", icon: ShoppingBag, label: "Orders" }, // Added Orders link
+  { href: "/orders", icon: ShoppingBag, label: "Orders" },
   { href: "/qr-code", icon: QrCodeIcon, label: "QR Code" },
   { href: "/profile", icon: UserCircle, label: "Profile" },
 ]
@@ -117,7 +117,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <UserNav />
             </div>
           </header>
-          <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
+          <main className="flex-1 overflow-y-auto"> {/* Removed padding here */}
             {children}
           </main>
         </SidebarInset>

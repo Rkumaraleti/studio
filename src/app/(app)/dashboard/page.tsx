@@ -104,9 +104,9 @@ export default function DashboardPage() {
   ];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 p-4 md:p-6 lg:p-8"> {/* Added padding here */}
       <Card className="shadow-lg bg-card border-border">
-        <CardHeader className="bg-gradient-to-r from-primary to-[hsl(210,70%,55%)] text-primary-foreground rounded-t-lg p-6">
+        <CardHeader className="bg-gradient-to-r from-primary to-[hsl(var(--primary-hsl),0.8)] text-primary-foreground rounded-t-lg p-6">
           <CardTitle className="text-3xl">Welcome Back, Merchant!</CardTitle>
           <CardDescription className="text-primary-foreground/80">Here's what's happening with your QR Plus menu today.</CardDescription>
         </CardHeader>

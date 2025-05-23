@@ -11,7 +11,6 @@ import { collection, query, where, onSnapshot, orderBy, doc, updateDoc } from "f
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, ShoppingBag, Info, RefreshCw, PackageCheck, Utensils, Bike, Ban } from "lucide-react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { /* Alert, AlertDescription, AlertTitle */ } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -22,7 +21,6 @@ import {
 } from "@/components/ui/select";
 import { formatDistanceToNow } from 'date-fns';
 
-// Map order statuses to labels, icons, and colors
 const orderStatusMap: Record<OrderStatus, { label: string; icon: React.ElementType; color: string }> = {
   pending: { label: "Pending", icon: RefreshCw, color: "bg-yellow-500" },
   paid: { label: "Paid", icon: PackageCheck, color: "bg-blue-500" },
@@ -102,7 +100,7 @@ export default function OrdersPage() {
 
   if (authLoading || isLoadingProfile || (isLoadingOrders && user && publicMerchantId)) {
     return (
-      <div className="flex justify-center items-center h-64">
+      <div className="flex justify-center items-center h-64 p-4 md:p-6 lg:p-8"> {/* Added padding here */}
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
         <p className="ml-4 text-lg">Loading orders...</p>
       </div>
@@ -115,121 +113,113 @@ export default function OrdersPage() {
 
   if (user && !publicMerchantId && !isLoadingProfile) {
     return (
-      <div className="flex justify-center items-center h-64">
+      <div className="flex justify-center items-center h-64 p-4 md:p-6 lg:p-8"> {/* Added padding here */}
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
         <p className="ml-3 text-md">Waiting for merchant profile to initialize...</p>
       </div>
     );
   }
 
-  if (orders.length === 0 && !isLoadingOrders) {
-    return (
-      <div className="space-y-8">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-primary mb-2 flex items-center">
-            <ShoppingBag className="mr-3 h-8 w-8" /> Orders
-          </h1>
-          <p className="text-muted-foreground">
-            View and manage incoming orders.
-          </p>
-        </div>
-        <div className="flex justify-center items-center h-64">
-          <Info className="h-8 w-8 text-muted-foreground mr-3" />
-          <p className="text-lg text-muted-foreground">No orders found.</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 p-4 md:p-6 lg:p-8"> {/* Added padding here */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight text-primary mb-2 flex items-center">
-          <ShoppingBag className="mr-3 h-8 w-8" /> Orders
+          <ShoppingBag className="mr-3 h-8 w-8" /> Orders Management
         </h1>
         <p className="text-muted-foreground">
-          View and manage incoming orders.
+          View and manage incoming orders from your customers.
         </p>
       </div>
-      {/* Display Orders */}
-      <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
-        {orders.map(order => {
-          const statusInfo = orderStatusMap[order.status] || { label: order.status, icon: Info, color: "bg-gray-500" };
-          const StatusIcon = statusInfo.icon;
 
-          return (
-            <Card key={order.id} className="flex flex-col">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-xl">Order #{order.id.substring(0, 8)}</CardTitle>
-                  <Badge className={`${statusInfo.color} text-white`}>
-                    <StatusIcon className="h-4 w-4 mr-1" />
-                    {statusInfo.label}
-                  </Badge>
-                </div>
-                <CardDescription>
-                  Placed {getRelativeTime(order.createdAt)} by {order.customerName || 'N/A'}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="grid gap-4 flex-grow">
-                <div className="flex items-center space-x-4">
-                  <div className="grid gap-1">
-                    <p className="text-sm font-medium leading-none">Items</p>
-                    <p className="text-sm text-muted-foreground">
-                      {order.items.map(item => `${item.quantity}x ${item.name}`).join(', ')}
-                    </p>
+      {isLoadingOrders ? (
+        <div className="flex justify-center items-center h-40">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="ml-3 text-md">Fetching latest orders...</p>
+        </div>
+      ) : orders.length === 0 ? (
+        <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed border-border rounded-lg bg-card p-8 text-center">
+          <ShoppingBag className="h-16 w-16 text-muted-foreground mb-4" />
+          <h2 className="text-xl font-semibold text-foreground">No Orders Yet</h2>
+          <p className="text-muted-foreground mt-1">
+            When customers place orders through your QR menu, they will appear here.
+          </p>
+        </div>
+      ) : (
+        <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
+          {orders.map(order => {
+            const statusInfo = orderStatusMap[order.status] || { label: order.status, icon: Info, color: "bg-gray-500" };
+            const StatusIcon = statusInfo.icon;
+
+            return (
+              <Card key={order.id} className="flex flex-col shadow-md hover:shadow-lg transition-shadow">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-xl">Order #{order.displayOrderId || order.id.substring(0, 8)}</CardTitle>
+                    <Badge className={`${statusInfo.color} text-white`}>
+                      <StatusIcon className="h-4 w-4 mr-1" />
+                      {statusInfo.label}
+                    </Badge>
                   </div>
-                </div>
-                <div className="flex items-center space-x-4">
-                  <div className="grid gap-1">
+                  <CardDescription>
+                    Placed {getRelativeTime(order.createdAt)} {order.customerName ? `by ${order.customerName}` : ''}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="grid gap-4 flex-grow">
+                  <div>
+                    <p className="text-sm font-medium leading-none mb-1">Items</p>
+                    <ul className="list-disc list-inside text-sm text-muted-foreground space-y-0.5">
+                      {order.items.map(item => (
+                        <li key={item.id}>{item.quantity}x {item.name} (${item.price.toFixed(2)} each)</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div>
                     <p className="text-sm font-medium leading-none">Total Amount</p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-lg font-semibold text-primary">
                       ${order.totalAmount.toFixed(2)}
                     </p>
                   </div>
-                </div>
-                {order.notes && (
-                   <div className="flex items-center space-x-4">
-                     <div className="grid gap-1">
+                  {order.notes && (
+                     <div>
                        <p className="text-sm font-medium leading-none">Notes</p>
-                       <p className="text-sm text-muted-foreground">
-                         {order.notes}
+                       <p className="text-sm text-muted-foreground italic">
+                         "{order.notes}"
                        </p>
                      </div>
-                   </div>
-                )}
-              </CardContent>
-              <CardFooter className="flex flex-col space-y-2 md:flex-row md:justify-between md:items-center md:space-y-0">
-                <div className="flex items-center text-sm text-muted-foreground">
-                  <Info className="h-4 w-4 mr-1" /> Updated {getRelativeTime(order.updatedAt || order.createdAt)}
-                </div>
-                 <div className="w-full md:w-auto">
-                  <Select onValueChange={(value) => handleStatusChange(order.id, value as OrderStatus)} value={order.status}>
-                    <SelectTrigger className="w-full md:w-[180px]">
-                      <SelectValue placeholder="Update Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.keys(orderStatusMap).map(statusKey => {
-                        const status = statusKey as OrderStatus;
-                        const statusInfo = orderStatusMap[status];
-                        const StatusIcon = statusInfo.icon;
-                        return (
-                          <SelectItem key={status} value={status}>
-                            <div className="flex items-center">
-                              <StatusIcon className={`h-4 w-4 mr-2 ${statusInfo.color.replace('bg-', 'text-')}`} />
-                              {statusInfo.label}
-                            </div>
-                          </SelectItem>
-                        );
-                      })}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </CardFooter>
-            </Card>
-          );
-        })}
-      </div>
+                  )}
+                </CardContent>
+                <CardFooter className="flex flex-col space-y-3 md:flex-row md:justify-between md:items-center md:space-y-0 border-t pt-4 mt-auto">
+                  <div className="flex items-center text-xs text-muted-foreground">
+                    <Info className="h-3 w-3 mr-1" /> Updated {getRelativeTime(order.updatedAt || order.createdAt)}
+                  </div>
+                   <div className="w-full md:w-auto">
+                    <Select onValueChange={(value) => handleStatusChange(order.id, value as OrderStatus)} value={order.status}>
+                      <SelectTrigger className="w-full md:w-[180px] h-9 text-sm">
+                        <SelectValue placeholder="Update Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.keys(orderStatusMap).map(statusKey => {
+                          const currentStatus = statusKey as OrderStatus;
+                          const currentStatusInfo = orderStatusMap[currentStatus];
+                          const CurrentStatusIcon = currentStatusInfo.icon;
+                          return (
+                            <SelectItem key={currentStatus} value={currentStatus} className="text-sm">
+                              <div className="flex items-center">
+                                <CurrentStatusIcon className={`h-4 w-4 mr-2 ${currentStatusInfo.color.replace('bg-', 'text-')}`} />
+                                {currentStatusInfo.label}
+                              </div>
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </CardFooter>
+              </Card>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

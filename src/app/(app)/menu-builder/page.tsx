@@ -9,7 +9,7 @@ import { MenuItemForm } from "./components/menu-item-form";
 import { MenuItemCardDisplay } from "./components/menu-item-card-display";
 import { useToast } from "@/hooks/use-toast";
 import { Separator } from "@/components/ui/separator";
-import { ListChecks, Info, Loader2, Eye, Smartphone } from "lucide-react"; // Added Eye
+import { ListChecks, Info, Loader2, Eye, Smartphone } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useAuth } from "@/contexts/auth-context";
 import { useMerchantProfile } from "@/hooks/use-merchant-profile";
@@ -24,7 +24,7 @@ import {
   deleteDoc,
   doc,
   serverTimestamp,
-  orderBy // Ensure orderBy is imported
+  orderBy
 } from "firebase/firestore";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -61,8 +61,8 @@ export default function MenuBuilderPage() {
     const q = query(
       menuItemsCollectionRef,
       where("merchantId", "==", publicMerchantId),
-      orderBy("category"), // Changed: Order by category
-      orderBy("name")      // Changed: Then by name
+      orderBy("category"), 
+      orderBy("name")      
     );
 
     console.log("[MenuBuilderPage] Subscribing to menu items for merchant:", publicMerchantId);
@@ -95,11 +95,10 @@ export default function MenuBuilderPage() {
     try {
       if (editingItem) {
         const itemDocRef = doc(db, "menuItems", editingItem.id);
-        // Ensure merchantId is not part of the data being updated directly if it's derived
         const { merchantId: currentItemMerchantId, ...restOfData } = data as any;
         const updatedData = {
             ...restOfData,
-            merchantId: publicMerchantId, // Ensure correct merchantId is set
+            merchantId: publicMerchantId, 
             updatedAt: serverTimestamp()
         };
         console.log("[MenuBuilderPage] Attempting to update item:", editingItem.id, "with data:", updatedData);
@@ -157,7 +156,7 @@ export default function MenuBuilderPage() {
 
   if (authLoading || isLoadingMerchantProfile || (isLoadingItems && user && publicMerchantId)) {
     return (
-      <div className="flex justify-center items-center h-64">
+      <div className="flex justify-center items-center h-64 p-4 md:p-6 lg:p-8"> {/* Added padding here */}
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
         <p className="ml-4 text-lg">Loading menu data...</p>
       </div>
@@ -166,7 +165,7 @@ export default function MenuBuilderPage() {
 
   if (!user && !authLoading) {
      return (
-      <div className="space-y-8 text-center">
+      <div className="space-y-8 text-center p-4 md:p-6 lg:p-8"> {/* Added padding here */}
         <h1 className="text-3xl font-bold tracking-tight text-primary mb-2">Menu Builder</h1>
          <Alert variant="destructive">
             <Info className="h-4 w-4" />
@@ -181,7 +180,7 @@ export default function MenuBuilderPage() {
 
   if (user && !publicMerchantId && !isLoadingMerchantProfile) {
     return (
-      <div className="space-y-8 text-center">
+      <div className="space-y-8 text-center p-4 md:p-6 lg:p-8"> {/* Added padding here */}
         <h1 className="text-3xl font-bold tracking-tight text-primary mb-2">Menu Builder</h1>
          <Alert variant="default">
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -196,7 +195,7 @@ export default function MenuBuilderPage() {
 
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 p-4 md:p-6 lg:p-8"> {/* Added padding here */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight text-primary mb-2">Menu Builder</h1>
         <p className="text-muted-foreground">
@@ -297,4 +296,3 @@ export default function MenuBuilderPage() {
     </div>
   );
 }
-

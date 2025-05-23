@@ -56,7 +56,7 @@ export default function QrCodePage() {
 
   if (isLoadingProfile) {
     return (
-      <div className="space-y-8 max-w-xl mx-auto text-center">
+      <div className="space-y-8 max-w-xl mx-auto text-center p-4 md:p-6 lg:p-8"> {/* Added padding here */}
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-primary mb-2">Your Menu QR Code</h1>
           <p className="text-muted-foreground flex items-center justify-center">
@@ -89,7 +89,7 @@ export default function QrCodePage() {
 
   if (!publicMerchantId && !isLoadingProfile) {
     return (
-      <div className="space-y-8 max-w-xl mx-auto">
+      <div className="space-y-8 max-w-xl mx-auto p-4 md:p-6 lg:p-8"> {/* Added padding here */}
          <div>
           <h1 className="text-3xl font-bold tracking-tight text-primary mb-2">QR Code Unavailable</h1>
         </div>
@@ -106,7 +106,7 @@ export default function QrCodePage() {
   }
 
   return (
-    <div className="space-y-8 max-w-xl mx-auto">
+    <div className="space-y-8 max-w-xl mx-auto p-4 md:p-6 lg:p-8"> {/* Added padding here */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight text-primary mb-2">Your Menu QR Code</h1>
         <p className="text-muted-foreground">
