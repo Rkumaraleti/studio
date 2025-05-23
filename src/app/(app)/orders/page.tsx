@@ -77,8 +77,8 @@ export default function OrdersPage() {
   const handleStatusChange = async (orderId: string, newStatus: OrderStatus) => {
     try {
       const orderDocRef = doc(db, "orders", orderId);
-      await updateDoc(orderDocRef, { status: newStatus, updatedAt: new Date() });
-      toast({ title: "Order Status Updated", description: `Order ${orderId} is now ${newStatus}.` });
+      await updateDoc(orderDocRef, { status: newStatus, updatedAt: new Date() }); // Using new Date() for client-side timestamp
+      toast({ title: "Order Status Updated", description: `Order ${orderId.substring(0,8)}... is now ${newStatus}.` });
     } catch (error) {
       console.error("Error updating order status:", error);
       toast({ title: "Update Error", description: "Could not update order status.", variant: "destructive" });
@@ -92,10 +92,10 @@ export default function OrdersPage() {
     try {
       return formatDistanceToNow(timestamp.toDate(), { addSuffix: true });
     } catch (error) {
+      console.warn("Error formatting date:", error, "Timestamp:", timestamp);
       return 'a while ago';
     }
   };
-
 
   if (authLoading || isLoadingProfile || (isLoadingOrders && user && publicMerchantId)) {
     return (
@@ -118,7 +118,7 @@ export default function OrdersPage() {
             </AlertDescription>
           </Alert>
       </div>
-     )
+     );
   }
 
   return (
@@ -157,7 +157,7 @@ export default function OrdersPage() {
                       Received {getRelativeTime(order.createdAt)}
                     </CardDescription>
                   </div>
-                  <Badge variant="secondary" className={`${orderStatusMap[order.status]?.color} text-white`}>
+                  <Badge variant="secondary" className={`${orderStatusMap[order.status]?.color || 'bg-gray-500'} text-white`}>
                      {orderStatusMap[order.status]?.icon && <orderStatusMap[order.status].icon className="mr-1 h-3 w-3" />}
                     {orderStatusMap[order.status]?.label || order.status}
                   </Badge>
@@ -178,7 +178,11 @@ export default function OrdersPage() {
                     <span>${order.totalAmount.toFixed(2)}</span>
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">Customer UID (short): {order.customerUid.substring(0,8)}...</p>
+                {order.customerUid && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                        Customer UID (short): {order.customerUid.substring(0,8)}...
+                    </p>
+                )}
               </CardContent>
               <CardFooter>
                 <Select
@@ -189,14 +193,17 @@ export default function OrdersPage() {
                     <SelectValue placeholder="Change Status" />
                   </SelectTrigger>
                   <SelectContent>
-                    {Object.keys(orderStatusMap).map((statusKey) => (
-                      <SelectItem key={statusKey} value={statusKey}>
-                        <div className="flex items-center">
-                           {orderStatusMap[statusKey as OrderStatus].icon && <orderStatusMap[statusKey as OrderStatus].icon className="mr-2 h-4 w-4" />}
-                          {orderStatusMap[statusKey as OrderStatus].label}
-                        </div>
-                      </SelectItem>
-                    ))}
+                    {Object.keys(orderStatusMap).map((statusKey) => {
+                      const statusInfo = orderStatusMap[statusKey as OrderStatus];
+                      return (
+                        <SelectItem key={statusKey} value={statusKey}>
+                          <div className="flex items-center">
+                            {statusInfo.icon && <statusInfo.icon className="mr-2 h-4 w-4" />}
+                            {statusInfo.label}
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               </CardFooter>
@@ -207,4 +214,3 @@ export default function OrdersPage() {
     </div>
   );
 }
-
