@@ -29,15 +29,16 @@ import { Skeleton } from "@/components/ui/skeleton";
 const groupByCategory = (items: MenuItem[]): MenuCategory[] => {
   const categories: { [key: string]: MenuItem[] } = {};
   items.forEach(item => {
-    if (!categories[item.category]) {
-      categories[item.category] = [];
+    const categoryKey = item.category || 'Uncategorized'; // Handle undefined/null categories
+    if (!categories[categoryKey]) {
+      categories[categoryKey] = [];
     }
-    categories[item.category].push(item);
+    categories[categoryKey].push(item);
   });
   return Object.keys(categories).sort().map(categoryName => ({
     id: categoryName.toLowerCase().replace(/\s+/g, '-'),
     name: categoryName,
-    items: categories[categoryName].sort((a,b) => a.name.localeCompare(b.name)),
+    items: categories[categoryName].sort((a,b) => (a.name || '').localeCompare(b.name || '')), // Safer sort
   }));
 };
 
@@ -46,7 +47,6 @@ export default function MerchantMenuPage() {
   const publicIdFromUrl = params.merchantId as string;
   
   const [merchantProfile, setMerchantProfile] = useState<MerchantProfile | null>(null);
-  // menuItems state is no longer needed here if we directly set menuCategories
   const [menuCategories, setMenuCategories] = useState<MenuCategory[]>([]);
   
   const [isLoading, setIsLoading] = useState(true);
@@ -66,8 +66,8 @@ export default function MerchantMenuPage() {
   const totalCartPrice = getTotalPrice();
 
   useEffect(() => {
-    if (!publicIdFromUrl) {
-      setError("Public Menu ID is missing from URL.");
+    if (!publicIdFromUrl || publicIdFromUrl.trim() === "") { // More robust check
+      setError("Public Menu ID is missing or invalid in URL.");
       setIsLoading(false);
       return;
     }
@@ -84,11 +84,9 @@ export default function MerchantMenuPage() {
         const merchantQuery = query(merchantsCollectionRef, where("publicMerchantId", "==", publicIdFromUrl), limit(1));
         const merchantQuerySnapshot = await getDocs(merchantQuery);
 
-        let fetchedMerchantProfile: MerchantProfile | null = null;
         if (!merchantQuerySnapshot.empty) {
           const merchantDoc = merchantQuerySnapshot.docs[0];
-          fetchedMerchantProfile = { id: merchantDoc.id, ...merchantDoc.data() } as MerchantProfile;
-          setMerchantProfile(fetchedMerchantProfile);
+          setMerchantProfile({ id: merchantDoc.id, ...merchantDoc.data() } as MerchantProfile);
         } else {
           setError("Restaurant profile not found for this ID.");
           setIsLoading(false);
@@ -99,8 +97,8 @@ export default function MerchantMenuPage() {
         const menuItemsCollectionRef = collection(db, "menuItems");
         const itemsQuery = query(
           menuItemsCollectionRef, 
-          where("merchantId", "==", publicIdFromUrl),
-          orderBy("category"), // Order by category then by name if needed in groupByCategory
+          where("merchantId", "==", publicIdFromUrl), // This merchantId should be the publicMerchantId
+          orderBy("category"), 
           orderBy("name")
         );
         const itemsQuerySnapshot = await getDocs(itemsQuery);
@@ -111,9 +109,9 @@ export default function MerchantMenuPage() {
         });
         setMenuCategories(groupByCategory(fetchedItems));
 
-      } catch (err) {
+      } catch (err: any) {
         console.error("Error fetching menu data:", err);
-        setError("Could not load menu. Please try again later.");
+        setError(`Could not load menu. ${err.message || 'Please try again later.'}`);
       } finally {
         setIsLoading(false);
       }
@@ -146,9 +144,7 @@ export default function MerchantMenuPage() {
           <h2 className="text-xl font-semibold mb-2">Loading Menu...</h2>
           <p className="text-muted-foreground text-sm">Please wait while we fetch the delicious items.</p>
         </div>
-        {/* Skeleton for description */}
         <Skeleton className="h-4 w-3/4 mx-auto mb-6" /> 
-        {/* Skeleton for categories and items */}
         {[1, 2].map(i => (
           <section key={i} className="mb-6">
             <Skeleton className="h-6 w-1/3 mb-3" />
@@ -173,18 +169,17 @@ export default function MerchantMenuPage() {
         </Alert>
       </div>
     );
-  }
+  }; // Explicit semicolon added
 
   return (
     <div className="space-y-6">
-      {/* Restaurant Description - placed above menu items */}
       {merchantProfile?.restaurantDescription && (
-        <p className="text-sm text-muted-foreground text-center mb-6 px-2">
+        <p className="text-xs text-muted-foreground text-center mb-4 px-2">
           {merchantProfile.restaurantDescription}
         </p>
-      )}
+       )}
        {!merchantProfile?.restaurantDescription && !isLoading && menuCategories.length > 0 && (
-         <p className="text-sm text-muted-foreground text-center mb-6 px-2">
+         <p className="text-xs text-muted-foreground text-center mb-4 px-2">
           Welcome! Browse our menu and add your favorites to your order.
         </p>
        )}
@@ -202,7 +197,7 @@ export default function MerchantMenuPage() {
 
       {menuCategories.map((category) => (
         <section key={category.id} className="scroll-mt-20" id={category.id}>
-          <h2 className="text-xl font-semibold text-primary mb-3 pb-1 border-b-2 border-primary/20">
+          <h2 className="text-lg font-semibold text-primary mb-2 pb-1 border-b-2 border-primary/20">
             {category.name}
           </h2>
           {category.items.length > 0 ? (
@@ -336,7 +331,7 @@ export default function MerchantMenuPage() {
           <Button 
             onClick={handleProceedToCheckout} 
             size="lg"
-            className="bg-accent hover:bg-accent/90 text-accent-foreground min-w-[150px]"
+            className="bg-accent hover:bg-accent/90 text-accent-foreground min-w-[140px]"
             disabled={totalCartItems === 0}
           >
             <CreditCard className="mr-2 h-5 w-5" />
@@ -348,7 +343,7 @@ export default function MerchantMenuPage() {
       <footer className="py-6 md:px-6 md:py-0 border-t mt-12">
           <div className="container mx-auto flex flex-col items-center justify-between gap-4 md:h-20 md:flex-row">
             <div className="text-balance text-center text-sm leading-loose text-muted-foreground md:text-left">
-              Powered by <Link href="/" className="font-semibold text-primary hover:underline">QR Plus</Link>.
+              Powered by QR Plus.
             </div>
             <p className="text-sm text-muted-foreground">
               &copy; {new Date().getFullYear()} {merchantProfile?.restaurantName || "Your Restaurant"}. All Rights Reserved.
