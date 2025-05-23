@@ -18,7 +18,7 @@ import {
   SheetTrigger,
   SheetFooter,
 } from "@/components/ui/sheet";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"; // Added ScrollBar
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { useCart } from "@/hooks/use-cart";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase/config";
@@ -97,7 +97,7 @@ export default function MerchantMenuPage() {
         const menuItemsCollectionRef = collection(db, "menuItems");
         const itemsQuery = query(
           menuItemsCollectionRef, 
-          where("merchantId", "==", publicIdFromUrl), // This should be publicMerchantId
+          where("merchantId", "==", publicIdFromUrl),
           orderBy("createdAt", "desc")
         );
         const itemsQuerySnapshot = await getDocs(itemsQuery);
@@ -223,12 +223,13 @@ export default function MerchantMenuPage() {
         </section>
       ))}
 
-      {cartItems.length > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border shadow-lg p-4 z-50">
-          <div className="container mx-auto flex items-center justify-between gap-4">
-            <Sheet>
-              <SheetTrigger asChild>
-                <div className="flex-grow cursor-pointer flex items-center group">
+      {/* Sticky Bottom Bar - Always visible */}
+      <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border shadow-lg p-4 z-50">
+        <div className="container mx-auto flex items-center justify-between gap-4">
+          <Sheet>
+            <SheetTrigger asChild>
+              <div className="flex-grow cursor-pointer flex items-center group">
+                {totalCartItems > 0 ? (
                   <div>
                     <p className="text-lg font-semibold group-hover:text-primary transition-colors">
                       {totalCartItems} item{totalCartItems !== 1 ? 's' : ''} in cart
@@ -237,18 +238,29 @@ export default function MerchantMenuPage() {
                       Total: <span className="font-bold text-primary">${totalCartPrice.toFixed(2)}</span>
                     </p>
                   </div>
-                  <ChevronUp className="ml-2 h-5 w-5 text-primary group-hover:text-accent transition-colors" />
-                </div>
-              </SheetTrigger>
-              <SheetContent side="bottom" className="max-h-[70vh] h-auto flex flex-col rounded-t-lg p-0">
-                <SheetHeader className="p-4 border-b">
-                  <SheetTitle className="text-2xl flex items-center">
-                    <ShoppingCart className="mr-3 h-6 w-6" /> Your Order
-                  </SheetTitle>
-                </SheetHeader>
-                <ScrollArea className="flex-grow">
-                  <div className="p-4 space-y-4">
-                    {cartItems.map((cartItemEntry) => (
+                ) : (
+                  <div>
+                    <p className="text-lg font-semibold group-hover:text-primary transition-colors">
+                      Your Order
+                    </p>
+                    <p className="text-sm text-muted-foreground group-hover:text-primary transition-colors">
+                      Cart is empty
+                    </p>
+                  </div>
+                )}
+                <ChevronUp className="ml-2 h-5 w-5 text-primary group-hover:text-accent transition-colors" />
+              </div>
+            </SheetTrigger>
+            <SheetContent side="bottom" className="max-h-[70vh] h-auto flex flex-col rounded-t-lg p-0">
+              <SheetHeader className="p-4 border-b">
+                <SheetTitle className="text-2xl flex items-center">
+                  <ShoppingCart className="mr-3 h-6 w-6" /> Your Order
+                </SheetTitle>
+              </SheetHeader>
+              <ScrollArea className="flex-grow">
+                <div className="p-4 space-y-4">
+                  {cartItems.length > 0 ? (
+                    cartItems.map((cartItemEntry) => (
                       <div key={cartItemEntry.id} className="flex items-start gap-4 p-3 border rounded-lg bg-card hover:shadow-md transition-shadow">
                         {cartItemEntry.imageUrl ? (
                           <Image
@@ -302,35 +314,35 @@ export default function MerchantMenuPage() {
                             </Button>
                         </div>
                       </div>
-                    ))}
-                     {cartItems.length === 0 && (
-                        <p className="text-muted-foreground text-center py-4">Your cart is empty.</p>
-                     )}
-                  </div>
-                </ScrollArea>
-                {cartItems.length > 0 && (
-                  <SheetFooter className="p-4 border-t bg-background">
-                    <Button variant="outline" onClick={clearCart} className="w-full">
-                      Clear Cart
-                    </Button>
-                  </SheetFooter>
-                )}
-              </SheetContent>
-            </Sheet>
+                    ))
+                  ) : (
+                      <p className="text-muted-foreground text-center py-4">Your cart is empty.</p>
+                  )}
+                </div>
+              </ScrollArea>
+              {cartItems.length > 0 && (
+                <SheetFooter className="p-4 border-t bg-background">
+                  <Button variant="outline" onClick={clearCart} className="w-full">
+                    Clear Cart
+                  </Button>
+                </SheetFooter>
+              )}
+            </SheetContent>
+          </Sheet>
 
-            <Button 
-              onClick={handleProceedToCheckout} 
-              size="lg"
-              className="bg-accent hover:bg-accent/90 text-accent-foreground min-w-[180px]"
-              disabled={totalCartItems === 0}
-            >
-              <CreditCard className="mr-2 h-5 w-5" />
-              Pay ${totalCartPrice.toFixed(2)}
-            </Button>
-          </div>
+          <Button 
+            onClick={handleProceedToCheckout} 
+            size="lg"
+            className="bg-accent hover:bg-accent/90 text-accent-foreground min-w-[180px]"
+            disabled={totalCartItems === 0}
+          >
+            <CreditCard className="mr-2 h-5 w-5" />
+            Pay ${totalCartPrice.toFixed(2)}
+          </Button>
         </div>
-      )}
-       <footer className="py-6 md:px-6 md:py-0 border-t mt-12">
+      </div>
+      
+      <footer className="py-6 md:px-6 md:py-0 border-t mt-12">
           <div className="container mx-auto flex flex-col items-center justify-between gap-4 md:h-20 md:flex-row">
             <p className="text-balance text-center text-sm leading-loose text-muted-foreground md:text-left">
               Powered by <AppLogo showText={false} size={16} className="inline-block align-middle" /> QR Plus.
