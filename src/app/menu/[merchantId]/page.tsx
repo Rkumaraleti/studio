@@ -141,10 +141,10 @@ export default function MerchantMenuPage() {
   if (isLoading) {
     return (
       <div className="space-y-12">
-        <div className="text-center border-b pb-8">
-          <Skeleton className="w-full h-48 md:h-64 object-cover rounded-lg mb-6 shadow-lg" />
-          <Skeleton className="h-10 w-3/4 sm:w-1/2 mx-auto mb-2" />
-          <Skeleton className="h-6 w-full max-w-md mx-auto" />
+        <div className="text-center border-b pb-6 pt-4">
+          <Skeleton className="w-24 h-24 object-cover rounded-lg mb-4 shadow-md mx-auto" />
+          <Skeleton className="h-8 w-1/2 sm:w-1/3 mx-auto mb-2" />
+          <Skeleton className="h-5 w-full max-w-xs mx-auto" />
         </div>
         <div className="text-center py-10 flex flex-col items-center justify-center">
           <Loader2 className="h-16 w-16 text-primary animate-spin mb-4" />
@@ -168,21 +168,21 @@ export default function MerchantMenuPage() {
   }
 
   return (
-    <div className="space-y-12">
-      <div className="text-center border-b pb-8">
+    <div className="space-y-8">
+      <div className="text-center border-b pb-6 pt-4">
         <Image 
-            src={`https://placehold.co/1200x300.png`} 
-            alt={`${restaurantName} Banner`}
-            width={1200} 
-            height={300} 
-            className="w-full h-auto max-h-64 object-cover rounded-lg mb-6 shadow-lg" 
-            data-ai-hint="restaurant food"
+            src={`https://placehold.co/100x100.png`} 
+            alt={`${restaurantName} Logo`}
+            width={100} 
+            height={100} 
+            className="w-24 h-24 object-cover rounded-lg mb-4 shadow-md mx-auto" 
+            data-ai-hint="restaurant logo"
             priority 
         />
-        <h1 className="text-4xl font-extrabold tracking-tight text-primary sm:text-5xl mb-2">
+        <h1 className="text-3xl font-bold tracking-tight text-primary sm:text-4xl mb-1">
           {restaurantName}
         </h1>
-        <p className="max-w-2xl mx-auto text-lg text-muted-foreground">
+        <p className="max-w-lg mx-auto text-md text-muted-foreground">
           Browse our delicious offerings and add your favorites to the cart.
         </p>
       </div>
@@ -199,7 +199,7 @@ export default function MerchantMenuPage() {
 
       {menuCategories.map((category) => (
         <section key={category.id} className="scroll-mt-20" id={category.id}>
-          <h2 className="text-3xl font-bold text-primary mb-6 pb-2 border-b-2 border-primary/30">
+          <h2 className="text-2xl font-semibold text-primary mb-4 pb-2 border-b-2 border-primary/30">
             {category.name}
           </h2>
           {category.items.length > 0 ? (
@@ -344,7 +344,7 @@ export default function MerchantMenuPage() {
       
       <footer className="py-6 md:px-6 md:py-0 border-t mt-12">
           <div className="container mx-auto flex flex-col items-center justify-between gap-4 md:h-20 md:flex-row">
-            <div className="text-balance text-center text-sm leading-loose text-muted-foreground md:text-left"> {/* Changed p to div */}
+            <div className="text-balance text-center text-sm leading-loose text-muted-foreground md:text-left">
               Powered by <AppLogo showText={false} size={16} className="inline-block align-middle" /> QR Plus.
             </div>
             <p className="text-sm text-muted-foreground">
