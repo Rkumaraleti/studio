@@ -1,10 +1,11 @@
+
 "use client";
 
 import Image from "next/image";
 import type { MenuItem } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlusCircle, ImageOff, DollarSign } from "lucide-react";
+import { PlusCircle, MinusCircle, ImageOff, DollarSign, ShoppingCart } from "lucide-react";
 import { useCart } from "@/hooks/use-cart";
 
 interface MenuDisplayItemProps {
@@ -12,10 +13,29 @@ interface MenuDisplayItemProps {
 }
 
 export function MenuDisplayItem({ item }: MenuDisplayItemProps) {
-  const { addItem } = useCart();
+  const { addItem, updateQuantity, removeItem, items: cartItems } = useCart();
+
+  const cartItem = cartItems.find(ci => ci.id === item.id);
+  const currentQuantity = cartItem ? cartItem.quantity : 0;
+
+  const handleIncrement = () => {
+    if (cartItem) {
+      updateQuantity(item.id, currentQuantity + 1);
+    } else {
+      addItem(item, 1); // Add item with quantity 1 if not in cart
+    }
+  };
+
+  const handleDecrement = () => {
+    if (currentQuantity > 1) {
+      updateQuantity(item.id, currentQuantity - 1);
+    } else if (currentQuantity === 1) {
+      removeItem(item.id); // Remove item if quantity becomes 0
+    }
+  };
 
   return (
-    <Card className="overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300 flex flex-col h-full">
+    <Card className="overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300 flex flex-col h-full group">
       <div className="relative w-full aspect-[4/3]">
         {item.imageUrl ? (
           <Image
@@ -40,14 +60,28 @@ export function MenuDisplayItem({ item }: MenuDisplayItemProps) {
           {item.description}
         </CardDescription>
         <div className="flex items-center font-semibold text-primary">
-          <DollarSign className="h-5 w-5 mr-1" /> 
+          <DollarSign className="h-5 w-5 mr-1" />
           {item.price.toFixed(2)}
         </div>
       </CardContent>
       <CardFooter className="border-t pt-4">
-        <Button onClick={() => addItem(item)} className="w-full bg-accent hover:bg-accent/90 text-accent-foreground">
-          <PlusCircle className="mr-2 h-5 w-5" /> Add to Cart
-        </Button>
+        {currentQuantity === 0 ? (
+          <Button onClick={handleIncrement} className="w-full bg-accent hover:bg-accent/90 text-accent-foreground">
+            <ShoppingCart className="mr-2 h-5 w-5" /> Add to Cart
+          </Button>
+        ) : (
+          <div className="flex items-center justify-between w-full">
+            <Button variant="outline" size="icon" onClick={handleDecrement} aria-label="Decrease quantity">
+              <MinusCircle className="h-5 w-5" />
+            </Button>
+            <span className="text-lg font-semibold w-10 text-center" aria-live="polite">
+              {currentQuantity}
+            </span>
+            <Button variant="outline" size="icon" onClick={handleIncrement} aria-label="Increase quantity">
+              <PlusCircle className="h-5 w-5" />
+            </Button>
+          </div>
+        )}
       </CardFooter>
     </Card>
   );
