@@ -86,7 +86,7 @@ export default function OrdersPage() {
       toast({ title: "Update Error", description: "Could not update order status.", variant: "destructive" });
     }
   };
-  
+
   const getRelativeTime = (timestamp: any) => {
     if (!timestamp || !timestamp.toDate) {
       return 'just now';
@@ -97,7 +97,7 @@ export default function OrdersPage() {
       console.warn("Error formatting date:", error, "Timestamp:", timestamp);
       return 'a while ago';
     }
-  }; // Explicit semicolon
+  };
 
   if (authLoading || isLoadingProfile || (isLoadingOrders && user && publicMerchantId)) {
     return (
@@ -107,9 +107,18 @@ export default function OrdersPage() {
       </div>
     );
   }
-  
+
   if (!user && !authLoading) {
-     return null;
+     return null; 
+  }
+
+  if (user && !publicMerchantId && !isLoadingProfile) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="ml-3 text-md">Waiting for merchant profile to initialize...</p>
+      </div>
+    );
   }
 
   return (
