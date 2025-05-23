@@ -71,7 +71,9 @@ export default function OrdersPage() {
       setIsLoadingOrders(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+    };
   }, [user, authLoading, publicMerchantId, isLoadingProfile, toast]);
 
   const handleStatusChange = async (orderId: string, newStatus: OrderStatus) => {
@@ -95,7 +97,7 @@ export default function OrdersPage() {
       console.warn("Error formatting date:", error, "Timestamp:", timestamp);
       return 'a while ago';
     }
-  };
+  }; // Explicit semicolon
 
   if (authLoading || isLoadingProfile || (isLoadingOrders && user && publicMerchantId)) {
     return (
@@ -107,18 +109,7 @@ export default function OrdersPage() {
   }
   
   if (!user && !authLoading) {
-     return (
-      <div className="space-y-8 text-center">
-        <h1 className="text-3xl font-bold tracking-tight text-primary mb-2">Orders Management</h1>
-         <Alert variant="destructive">
-            <Info className="h-4 w-4" />
-            <AlertTitle>Access Denied</AlertTitle>
-            <AlertDescription>
-              Please log in to manage your orders.
-            </AlertDescription>
-          </Alert>
-      </div>
-     );
+     return null;
   }
 
   return (
@@ -132,7 +123,7 @@ export default function OrdersPage() {
         </p>
       </div>
 
-      {isLoadingOrders && user ? (
+      {isLoadingOrders && user && publicMerchantId ? (
         <div className="flex justify-center items-center h-40">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
           <p className="ml-3 text-md">Fetching your orders...</p>
