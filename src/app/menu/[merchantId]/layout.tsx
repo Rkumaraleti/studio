@@ -2,7 +2,7 @@
 // src/app/menu/[merchantId]/layout.tsx
 "use client"; 
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, use } from "react"; // Added 'use'
 import Head from "next/head"; 
 import Link from "next/link";
 import { CartProvider } from '@/hooks/use-cart';
@@ -16,8 +16,10 @@ export default function PublicMenuLayout({
   params,
 }: {
   children: React.ReactNode;
-  params: { merchantId: string };
+  params: Promise<{ merchantId: string }>; // Updated type to reflect params can be a Promise
 }) {
+  const resolvedParams = use(params); // Unwrap the params Promise
+
   const [headerData, setHeaderData] = useState<{ name: string | null; loading: boolean; error: string | null }>({
     name: null,
     loading: true,
@@ -34,7 +36,7 @@ export default function PublicMenuLayout({
   }, []);
 
   useEffect(() => {
-    if (!params.merchantId) {
+    if (!resolvedParams.merchantId) { // Use resolvedParams
       setHeaderData({ name: "Menu", loading: false, error: "Merchant ID missing." });
       return;
     }
@@ -43,7 +45,8 @@ export default function PublicMenuLayout({
       setHeaderData(prev => ({ ...prev, loading: true, error: null }));
       try {
         const merchantsCollectionRef = collection(db, "merchants");
-        const merchantQuery = query(merchantsCollectionRef, where("publicMerchantId", "==", params.merchantId), limit(1));
+        // Use resolvedParams.merchantId for the query
+        const merchantQuery = query(merchantsCollectionRef, where("publicMerchantId", "==", resolvedParams.merchantId), limit(1));
         const merchantQuerySnapshot = await getDocs(merchantQuery);
 
         if (!merchantQuerySnapshot.empty) {
@@ -60,7 +63,7 @@ export default function PublicMenuLayout({
     };
 
     fetchRestaurantName();
-  }, [params.merchantId]);
+  }, [resolvedParams.merchantId]); // Depend on resolvedParams.merchantId
 
   return (
     <CartProvider>
@@ -77,7 +80,8 @@ export default function PublicMenuLayout({
         <div className="flex flex-col min-h-screen">
           <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur-sm">
             <div className="container mx-auto flex h-14 items-center justify-between px-4 md:px-6">
-              <Link href={`/menu/${params.merchantId}`} className="flex items-center gap-2 group">
+              {/* Use resolvedParams.merchantId for the Link href */}
+              <Link href={`/menu/${resolvedParams.merchantId}`} className="flex items-center gap-2 group">
                 <Utensils className="h-6 w-6 text-primary group-hover:text-accent transition-colors" />
                 {headerData.loading ? (
                   <span className="text-sm font-semibold text-muted-foreground animate-pulse">Loading...</span>
