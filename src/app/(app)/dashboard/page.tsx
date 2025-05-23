@@ -8,7 +8,7 @@ import { ClipboardList, QrCode, UserCircle, DollarSign, ListChecks, Loader2, Sta
 import { useAuth } from "@/contexts/auth-context";
 import { useMerchantProfile } from "@/hooks/use-merchant-profile";
 import { db } from "@/lib/firebase/config";
-import { collection, query, where, getCountFromServer, Timestamp } from "firebase/firestore";
+import { collection, query, where, getCountFromServer, Timestamp, orderBy } from "firebase/firestore";
 import { useEffect, useState } from "react";
 
 interface DashboardStats {
@@ -53,7 +53,8 @@ export default function DashboardPage() {
           collection(db, "orders"),
           where("merchantPublicId", "==", publicMerchantId),
           where("createdAt", ">=", startOfTodayTimestamp),
-          where("createdAt", "<=", endOfTodayTimestamp)
+          where("createdAt", "<=", endOfTodayTimestamp),
+          orderBy("createdAt", "desc") // Added this to align with existing enabled index
         );
         const ordersSnapshot = await getCountFromServer(ordersQuery);
         const todaysOrdersCount = ordersSnapshot.data().count;
@@ -153,7 +154,7 @@ export default function DashboardPage() {
                   <p className="text-xs text-muted-foreground mt-1">{stat.note}</p>
                 )}
                 {errorFetchingStats && (stat.title === "Today's Orders" || stat.title === "Total Menu Items") && (
-                   <p className="text-xs text-destructive mt-1">Could not load. Index might be building.</p>
+                   <p className="text-xs text-destructive mt-1">Could not load. Firestore index might be building.</p>
                 )}
               </CardContent>
             </Card>
@@ -163,3 +164,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+
