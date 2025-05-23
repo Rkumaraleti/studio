@@ -23,7 +23,7 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-export function CartProvider({ children }: { children: React.ReactNode }) {
+export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const { toast } = useToast();
@@ -80,7 +80,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     if (itemToRemove) {
       toast({ title: `${itemToRemove.name} removed from cart`, variant: "destructive" });
     }
-  }, [toast, items]);
+  }, [toast, items]); // Added items dependency
 
   const updateQuantity = useCallback((itemId: string, newQuantity: number) => {
     if (newQuantity <= 0) {
@@ -122,13 +122,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     toggleCart,
     openCart,
     closeCart,
-  }; // Semicolon added here
+  };
 
-  const Provider = CartContext.Provider;
   return (
-    <Provider value={contextValue}>
+    <CartContext.Provider value={contextValue}>
       {children}
-    </Provider>
+    </CartContext.Provider>
   );
 }
 
