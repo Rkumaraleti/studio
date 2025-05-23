@@ -1,7 +1,8 @@
+
 {
   "name": "QR Plus Menu",
   "short_name": "QR Menu",
-  "description": "Access your digital menu instantly.",
+  "description": "Your digital menu, instantly accessible.",
   "icons": [
     {
       "src": "/icon-192x192.png",
