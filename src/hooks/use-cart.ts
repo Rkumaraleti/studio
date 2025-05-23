@@ -109,6 +109,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const openCart = useCallback(() => setIsCartOpen(true), []);
   const closeCart = useCallback(() => setIsCartOpen(false), []);
 
+
   const contextValue: CartContextType = {
     items,
     addItem,
@@ -123,7 +124,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     closeCart,
   };
 
-  const Provider = CartContext.Provider; // Use Provider as an alias
+  const Provider = CartContext.Provider;
 
   return (
     <Provider value={contextValue}>
