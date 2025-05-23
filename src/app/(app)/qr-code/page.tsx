@@ -57,13 +57,13 @@ export default function QrCodePage() {
   if (isLoadingProfile) {
     return (
       <div className="p-4 md:p-6 lg:p-8"> {/* Standard page padding */}
-        <div className="space-y-8 max-w-xl mx-auto text-center"> {/* Centered content */}
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-primary mb-2">Your Menu QR Code</h1>
-            <p className="text-muted-foreground flex items-center justify-center">
-              <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Loading merchant details...
-            </p>
-          </div>
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold tracking-tight text-primary mb-2">Your Menu QR Code</h1>
+          <p className="text-muted-foreground flex items-center">
+            <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Loading merchant details...
+          </p>
+        </div>
+        <div className="space-y-8 max-w-2xl mx-auto">
           <Card className="shadow-xl overflow-hidden">
             <CardHeader>
               <Skeleton className="h-8 w-1/3 mx-auto" />
@@ -92,33 +92,31 @@ export default function QrCodePage() {
   if (!publicMerchantId && !isLoadingProfile) {
     return (
       <div className="p-4 md:p-6 lg:p-8"> {/* Standard page padding */}
-        <div className="space-y-8 max-w-xl mx-auto"> {/* Centered content */}
-           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-primary mb-2">QR Code Unavailable</h1>
-          </div>
-          <Alert variant="destructive">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>Merchant ID Not Found</AlertTitle>
-            <AlertDescription>
-              We couldn't load your public Merchant ID. Please ensure you are logged in, your profile is set up, and try again.
-              If this issue persists, your profile might still be finalizing.
-            </AlertDescription>
-          </Alert>
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold tracking-tight text-primary mb-2">QR Code Unavailable</h1>
         </div>
+        <Alert variant="destructive" className="max-w-2xl mx-auto">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Merchant ID Not Found</AlertTitle>
+          <AlertDescription>
+            We couldn't load your public Merchant ID. Please ensure you are logged in, your profile is set up, and try again.
+            If this issue persists, your profile might still be finalizing.
+          </AlertDescription>
+        </Alert>
       </div>
     );
   }
 
   return (
     <div className="p-4 md:p-6 lg:p-8"> {/* Standard page padding */}
-      <div className="space-y-8 max-w-xl mx-auto"> {/* Centered content wrapper */}
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-primary mb-2">Your Menu QR Code</h1>
-          <p className="text-muted-foreground">
-            Share this QR code with your customers. Your Public Menu ID: <strong>{publicMerchantId}</strong>
-          </p>
-        </div>
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold tracking-tight text-primary mb-2">Your Menu QR Code</h1>
+        <p className="text-muted-foreground">
+          Share this QR code with your customers. Your Public Menu ID: <strong>{publicMerchantId}</strong>
+        </p>
+      </div>
 
+      <div className="space-y-8 max-w-2xl mx-auto"> {/* Centered content wrapper */}
         <Card className="shadow-xl overflow-hidden">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl flex items-center justify-center">
@@ -192,4 +190,3 @@ const Label = ({ htmlFor, className, children }: { htmlFor?: string; className?:
     {children}
   </label>
 );
-
