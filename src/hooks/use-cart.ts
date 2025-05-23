@@ -122,10 +122,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     toggleCart,
     openCart,
     closeCart,
-  };
+  }; // Semicolon added here
 
   const Provider = CartContext.Provider;
-
   return (
     <Provider value={contextValue}>
       {children}
