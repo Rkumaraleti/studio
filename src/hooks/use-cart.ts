@@ -23,7 +23,7 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-export function CartProvider({ children }: { children: ReactNode }) {
+export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const { toast } = useToast();
@@ -59,6 +59,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       const existingItemIndex = prevItems.findIndex((i) => i.id === item.id);
 
       if (existingItemIndex > -1) {
+        // Item exists, update quantity
         const updatedItems = prevItems.map((cartItem, index) =>
           index === existingItemIndex
             ? { ...cartItem, quantity: cartItem.quantity + quantity }
@@ -66,6 +67,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         );
         return updatedItems;
       } else {
+        // Item does not exist, add new item
         return [...prevItems, { ...item, quantity }];
       }
     });
@@ -73,12 +75,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [toast]);
 
   const removeItem = useCallback((itemId: string) => {
-    const removedItem = items.find(i => i.id === itemId); // Find before filtering
+    const itemToRemove = items.find(i => i.id === itemId);
     setItems((prevItems) => prevItems.filter((i) => i.id !== itemId));
-    if (removedItem) {
-      toast({ title: `${removedItem.name} removed from cart`, variant: "destructive" });
+    if (itemToRemove) {
+      toast({ title: `${itemToRemove.name} removed from cart`, variant: "destructive" });
     }
-  }, [items, toast]); // items dependency is needed here for removedItem
+  }, [toast, items]);
 
   const updateQuantity = useCallback((itemId: string, newQuantity: number) => {
     if (newQuantity <= 0) {
@@ -121,7 +123,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
     closeCart,
   };
 
-  return <CartContext.Provider value={contextValue}>{children}</CartContext.Provider>;
+  const Provider = CartContext.Provider; // Use Provider as an alias
+
+  return (
+    <Provider value={contextValue}>
+      {children}
+    </Provider>
+  );
 }
 
 export function useCart() {
