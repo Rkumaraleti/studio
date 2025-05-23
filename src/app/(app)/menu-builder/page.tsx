@@ -9,10 +9,10 @@ import { MenuItemForm } from "./components/menu-item-form";
 import { MenuItemCardDisplay } from "./components/menu-item-card-display";
 import { useToast } from "@/hooks/use-toast";
 import { Separator } from "@/components/ui/separator";
-import { ListChecks, Info, Loader2 } from "lucide-react";
+import { ListChecks, Info, Loader2, Eye, Smartphone } from "lucide-react"; // Added Eye
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useAuth } from "@/contexts/auth-context";
-import { useMerchantProfile } from "@/hooks/use-merchant-profile"; // Import useMerchantProfile
+import { useMerchantProfile } from "@/hooks/use-merchant-profile";
 import { db } from "@/lib/firebase/config";
 import { 
   collection, 
@@ -26,33 +26,41 @@ import {
   serverTimestamp,
   orderBy
 } from "firebase/firestore";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+
 
 export default function MenuBuilderPage() {
   const { user, loading: authLoading } = useAuth();
-  // Use useMerchantProfile to get publicMerchantId
   const { publicMerchantId, isLoadingProfile: isLoadingMerchantProfile } = useMerchantProfile(); 
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [editingItem, setEditingItem] = useState<MenuItem | undefined>(undefined);
   const { toast } = useToast();
   const [isLoadingItems, setIsLoadingItems] = useState(true);
+  const [previewMenuUrl, setPreviewMenuUrl] = useState('');
 
   useEffect(() => {
     if (authLoading || isLoadingMerchantProfile) {
       setIsLoadingItems(true);
       return;
     }
-    if (!user || !publicMerchantId) { // Check for publicMerchantId as well
+    if (!user || !publicMerchantId) {
       setMenuItems([]);
       setIsLoadingItems(false);
+      setPreviewMenuUrl('');
       return;
     }
 
+    if (typeof window !== 'undefined' && publicMerchantId) {
+      const currentOrigin = window.location.origin;
+      setPreviewMenuUrl(`${currentOrigin}/menu/${publicMerchantId}`);
+    }
+
+
     setIsLoadingItems(true);
     const menuItemsCollectionRef = collection(db, "menuItems");
-    // Query items for the current merchant using publicMerchantId, ordered by creation date
     const q = query(
       menuItemsCollectionRef, 
-      where("merchantId", "==", publicMerchantId), // Use publicMerchantId for querying
+      where("merchantId", "==", publicMerchantId),
       orderBy("createdAt", "desc")
     );
 
@@ -73,7 +81,7 @@ export default function MenuBuilderPage() {
   }, [user, authLoading, publicMerchantId, isLoadingMerchantProfile, toast]);
 
   const handleAddItem = async (data: Omit<MenuItem, 'id' | 'merchantId' | 'createdAt' | 'updatedAt'>) => {
-    if (!user || !publicMerchantId) { // Ensure publicMerchantId is available
+    if (!user || !publicMerchantId) {
       toast({ title: "Authentication or Profile Error", description: "You must be logged in and have a merchant profile.", variant: "destructive" });
       return;
     }
@@ -81,11 +89,10 @@ export default function MenuBuilderPage() {
     try {
       if (editingItem) {
         const itemDocRef = doc(db, "menuItems", editingItem.id);
-        // Ensure merchantId is not accidentally changed during update
         const { merchantId: currentItemMerchantId, ...restOfData } = data as any; 
         const updatedData = {
-            ...restOfData, // Use restOfData which doesn't include merchantId from form
-            merchantId: publicMerchantId, // Ensure it's the correct publicMerchantId
+            ...restOfData,
+            merchantId: publicMerchantId,
             updatedAt: serverTimestamp() 
         };
         console.log("Attempting to update item:", editingItem.id, updatedData);
@@ -93,9 +100,9 @@ export default function MenuBuilderPage() {
         toast({ title: "Item Updated", description: `${data.name} has been updated successfully.` });
         setEditingItem(undefined);
       } else {
-        const newItemData: Omit<MenuItem, 'id'> = { // Explicitly type to match Firestore structure
+        const newItemData: Omit<MenuItem, 'id'> = { 
           ...data,
-          merchantId: publicMerchantId, // Use publicMerchantId
+          merchantId: publicMerchantId,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         };
@@ -126,8 +133,6 @@ export default function MenuBuilderPage() {
     }
     try {
       console.log("Attempting to delete item:", itemId);
-      // Optional: Add a check here to ensure the item belongs to the current merchant if needed,
-      // though Firestore rules should ideally enforce this.
       await deleteDoc(doc(db, "menuItems", itemId));
       toast({ title: "Item Deleted", description: "The menu item has been removed." });
       if (editingItem?.id === itemId) {
@@ -240,6 +245,49 @@ export default function MenuBuilderPage() {
             Items are automatically saved to your secure cloud database.
           </p>
       </div>
+
+      <Separator className="my-8" />
+
+      {publicMerchantId && (
+        <section className="space-y-6">
+            <h2 className="text-2xl font-semibold text-primary flex items-center">
+              <Eye className="mr-2 h-6 w-6" /> Live Menu Preview
+            </h2>
+            <Card className="shadow-lg">
+              <CardContent className="p-2 sm:p-4">
+                <div className="aspect-[9/19.5] w-full max-w-sm mx-auto bg-muted rounded-xl p-2 sm:p-3 shadow-2xl border-4 border-foreground/70">
+                  <div className="w-full h-4 bg-foreground/70 rounded-t-md flex items-center justify-center mb-1">
+                    <span className="w-10 h-1 bg-muted/50 rounded-full"></span>
+                  </div>
+                  {previewMenuUrl ? (
+                    <iframe
+                      src={previewMenuUrl}
+                      title="Menu Preview"
+                      className="w-full h-full border-0 rounded-md bg-background"
+                      sandbox="allow-scripts allow-same-origin" 
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-background rounded-md">
+                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                      <p className="ml-3 text-md">Loading preview...</p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+              <CardFooter className="flex-col items-center gap-2">
+                <p className="text-xs text-muted-foreground text-center w-full">
+                  This is a live preview of your public menu. Changes may take a moment to reflect after saving.
+                </p>
+                <Button asChild variant="outline" size="sm" disabled={!previewMenuUrl}>
+                  <a href={previewMenuUrl || '#'} target="_blank" rel="noopener noreferrer">
+                    <Smartphone className="mr-2 h-4 w-4" /> Open Menu in New Tab
+                  </a>
+                </Button>
+              </CardFooter>
+            </Card>
+        </section>
+      )}
     </div>
   );
 }
+
