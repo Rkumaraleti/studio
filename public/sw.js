@@ -1,50 +1,72 @@
+
 // public/sw.js
+const CACHE_NAME = 'qr-plus-cache-v1';
+// Add any assets here that you want to cache during the install phase
+const PRECACHE_ASSETS = [
+  '/manifest.json',
+  // Add paths to your PWA icons if you want them pre-cached
+  // '/icon-192x192.png',
+  // '/icon-512x512.png',
+  // '/apple-touch-icon.png',
+  // Add shell pages if desired, e.g., '/menu/' if you have a generic shell
+];
+
 self.addEventListener('install', (event) => {
   console.log('QR Plus Service Worker: Installing...');
-  // Pre-caching essential assets (optional, but good for app shell)
-  // Example:
   // event.waitUntil(
-  //   caches.open('qrplus-cache-v1').then((cache) => {
-  //     return cache.addAll([
-  //       '/menu/', // A generic shell for the menu section
-  //       '/manifest.json',
-  //       // Add other critical assets like global CSS, main JS bundles if names are static
-  //     ]);
+  //   caches.open(CACHE_NAME).then((cache) => {
+  //     console.log('QR Plus Service Worker: Caching pre-cache assets');
+  //     return cache.addAll(PRECACHE_ASSETS);
   //   })
   // );
-  self.skipWaiting(); // Ensures the new service worker activates immediately
+  // Force the waiting service worker to become the active service worker.
+  self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
   console.log('QR Plus Service Worker: Activating...');
-  // Clean up old caches (optional, but good practice)
-  // Example:
-  // const currentCacheName = 'qrplus-cache-v1';
+  // Clean up old caches if necessary
   // event.waitUntil(
   //   caches.keys().then((cacheNames) => {
   //     return Promise.all(
-  //       cacheNames.filter((cacheName) => cacheName !== currentCacheName)
-  //                 .map((cacheName) => caches.delete(cacheName))
+  //       cacheNames.map((cacheName) => {
+  //         if (cacheName !== CACHE_NAME) {
+  //           console.log('QR Plus Service Worker: Deleting old cache', cacheName);
+  //           return caches.delete(cacheName);
+  //         }
+  //       })
   //     );
   //   })
   // );
-  event.waitUntil(self.clients.claim()); // Allows the activated SW to control clients immediately
+  // Take control of all clients as soon as the SW activates.
+  return self.clients.claim();
 });
 
 self.addEventListener('fetch', (event) => {
-  // This is a basic fetch handler.
-  // For a truly offline-first PWA, you would implement caching strategies here.
-  // For example, network-first, then cache, or cache-first for static assets.
-  // This simple version attempts to fetch from the network.
-  // It's often enough to satisfy the "has a fetch handler" PWA installability requirement.
-  // console.log('QR Plus Service Worker: Fetching ', event.request.url);
-  event.respondWith(fetch(event.request).catch(() => {
-    // Basic fallback: if network fails, and if you had an offline page cached:
-    // return caches.match('/offline.html'); 
-    // For now, just let the network failure propagate if not handled by a more specific cache strategy.
-    // This mainly serves to make the PWA installable.
-    // If you want to ensure the page loads even if the SW fetch fails,
-    // you might just return fetch(event.request) without try-catch or respondWith for GET requests.
-    // However, respondWith is generally expected for a fetch handler.
-  }));
+  // Log all fetch requests handled by the service worker
+  console.log(`QR Plus Service Worker: Fetching ${event.request.method} ${event.request.url}`);
+
+  // Basic pass-through fetch strategy (network first).
+  // For offline capabilities, you would implement more sophisticated caching strategies here.
+  // Example: Network falling back to cache, or cache first then network.
+  event.respondWith(
+    fetch(event.request)
+      .then((response) => {
+        // You could cache successful GET requests here if desired
+        // if (response.ok && event.request.method === 'GET') {
+        //   const responseToCache = response.clone();
+        //   caches.open(CACHE_NAME).then((cache) => {
+        //     cache.put(event.request, responseToCache);
+        //   });
+        // }
+        return response;
+      })
+      .catch((error) => {
+        // If the network request fails, you might want to serve a fallback page or resource from cache
+        console.error('QR Plus Service Worker: Fetch error:', error);
+        // Example: return caches.match('/offline.html');
+        // For now, just re-throw the error to let the browser handle it (e.g., show offline page)
+        throw error;
+      })
+  );
 });
