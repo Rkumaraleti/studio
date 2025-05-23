@@ -66,34 +66,43 @@ export default function MerchantMenuPage() {
   const totalCartPrice = getTotalPrice();
 
   useEffect(() => {
-    if (!publicIdFromUrl || publicIdFromUrl.trim() === "") { // More robust check
+    console.log("[MerchantMenuPage] useEffect triggered. publicIdFromUrl:", publicIdFromUrl);
+
+    if (!publicIdFromUrl || publicIdFromUrl.trim() === "") {
+      console.error("[MerchantMenuPage] Public Menu ID is missing or invalid in URL.");
       setError("Public Menu ID is missing or invalid in URL.");
       setIsLoading(false);
       return;
     }
 
     const fetchData = async () => {
+      console.log("[MerchantMenuPage] fetchData called for publicId:", publicIdFromUrl);
       setIsLoading(true);
       setError(null);
-      setMerchantProfile(null);
-      setMenuCategories([]);
+      setMerchantProfile(null); // Reset profile state
+      setMenuCategories([]);   // Reset categories state
 
       try {
         // Fetch merchant profile (for description, primarily)
+        console.log("[MerchantMenuPage] Fetching merchant profile for publicId:", publicIdFromUrl);
         const merchantsCollectionRef = collection(db, "merchants");
         const merchantQuery = query(merchantsCollectionRef, where("publicMerchantId", "==", publicIdFromUrl), limit(1));
         const merchantQuerySnapshot = await getDocs(merchantQuery);
 
         if (!merchantQuerySnapshot.empty) {
           const merchantDoc = merchantQuerySnapshot.docs[0];
-          setMerchantProfile({ id: merchantDoc.id, ...merchantDoc.data() } as MerchantProfile);
+          const profileData = { id: merchantDoc.id, ...merchantDoc.data() } as MerchantProfile;
+          console.log("[MerchantMenuPage] Merchant profile found:", profileData);
+          setMerchantProfile(profileData);
         } else {
+          console.warn("[MerchantMenuPage] Restaurant profile not found for this ID:", publicIdFromUrl);
           setError("Restaurant profile not found for this ID.");
           setIsLoading(false);
-          return;
+          return; // Stop if profile not found
         }
 
         // Fetch menu items
+        console.log("[MerchantMenuPage] Fetching menu items for merchant (publicId):", publicIdFromUrl);
         const menuItemsCollectionRef = collection(db, "menuItems");
         const itemsQuery = query(
           menuItemsCollectionRef, 
@@ -107,12 +116,17 @@ export default function MerchantMenuPage() {
         itemsQuerySnapshot.forEach((doc) => {
           fetchedItems.push({ id: doc.id, ...doc.data() } as MenuItem);
         });
-        setMenuCategories(groupByCategory(fetchedItems));
+        console.log(`[MerchantMenuPage] Fetched ${fetchedItems.length} raw menu items:`, fetchedItems);
+
+        const groupedCategories = groupByCategory(fetchedItems);
+        console.log("[MerchantMenuPage] Menu items grouped by category:", groupedCategories);
+        setMenuCategories(groupedCategories);
 
       } catch (err: any) {
-        console.error("Error fetching menu data:", err);
+        console.error("[MerchantMenuPage] Error fetching menu data:", err);
         setError(`Could not load menu. ${err.message || 'Please try again later.'}`);
       } finally {
+        console.log("[MerchantMenuPage] fetchData finished. Setting isLoading to false.");
         setIsLoading(false);
       }
     };
@@ -169,7 +183,7 @@ export default function MerchantMenuPage() {
         </Alert>
       </div>
     );
-  }; // Explicit semicolon added
+  }
 
   return (
     <div className="space-y-6">
@@ -184,8 +198,7 @@ export default function MerchantMenuPage() {
         </p>
        )}
 
-
-      {!isLoading && menuCategories.length === 0 && !error && (
+      {menuCategories.length === 0 && !error && (
         <Alert variant="default" className="max-w-md mx-auto mt-8">
           <ShoppingBag className="h-5 w-5" />
           <AlertTitle>Menu Coming Soon!</AlertTitle>
@@ -221,7 +234,7 @@ export default function MerchantMenuPage() {
         </section>
       ))}
 
-      {/* Sticky Bottom Bar - Always visible */}
+      {/* Sticky Bottom Bar - Always visible if cart has items, or shows cart is empty */}
       <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border shadow-lg p-4 z-50">
         <div className="container mx-auto flex items-center justify-between gap-4">
           <Sheet>
@@ -331,7 +344,7 @@ export default function MerchantMenuPage() {
           <Button 
             onClick={handleProceedToCheckout} 
             size="lg"
-            className="bg-accent hover:bg-accent/90 text-accent-foreground min-w-[140px]"
+            className="bg-accent hover:bg-accent/90 text-accent-foreground min-w-[140px]" // Reduced min-width
             disabled={totalCartItems === 0}
           >
             <CreditCard className="mr-2 h-5 w-5" />
@@ -343,7 +356,7 @@ export default function MerchantMenuPage() {
       <footer className="py-6 md:px-6 md:py-0 border-t mt-12">
           <div className="container mx-auto flex flex-col items-center justify-between gap-4 md:h-20 md:flex-row">
             <div className="text-balance text-center text-sm leading-loose text-muted-foreground md:text-left">
-              Powered by QR Plus.
+               Powered by QR Plus.
             </div>
             <p className="text-sm text-muted-foreground">
               &copy; {new Date().getFullYear()} {merchantProfile?.restaurantName || "Your Restaurant"}. All Rights Reserved.
@@ -353,3 +366,4 @@ export default function MerchantMenuPage() {
     </div>
   );
 }
+
