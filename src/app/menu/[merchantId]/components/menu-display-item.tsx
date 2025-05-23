@@ -18,6 +18,13 @@ export function MenuDisplayItem({ item }: MenuDisplayItemProps) {
   const cartItem = cartItems.find(ci => ci.id === item.id);
   const currentQuantity = cartItem ? cartItem.quantity : 0;
 
+  const itemName = typeof item.name === 'string' && item.name.trim() !== '' ? item.name : "Unnamed Item";
+  const itemDescription = typeof item.description === 'string' ? item.description : "No description available.";
+
+  if (typeof item.name !== 'string' || item.name.trim() === '') {
+    console.warn(`[MenuDisplayItem] Item with ID ${item.id} has a missing or invalid name. Displaying as "${itemName}".`, item);
+  }
+
   const handleIncrement = () => {
     if (cartItem) {
       updateQuantity(item.id, currentQuantity + 1);
@@ -40,7 +47,7 @@ export function MenuDisplayItem({ item }: MenuDisplayItemProps) {
         {item.imageUrl ? (
           <Image
             src={item.imageUrl}
-            alt={item.name}
+            alt={itemName} // Use fallback name
             layout="fill"
             objectFit="cover"
             className="transition-transform duration-300 group-hover:scale-105"
@@ -53,11 +60,11 @@ export function MenuDisplayItem({ item }: MenuDisplayItemProps) {
         )}
       </div>
       <CardHeader className="pb-2 pt-3"> {/* Adjusted padding */}
-        <CardTitle className="text-lg truncate">{item.name}</CardTitle> {/* Adjusted font size and truncate */}
+        <CardTitle className="text-lg truncate">{itemName}</CardTitle> {/* Adjusted font size and truncate, use fallback name */}
       </CardHeader>
       <CardContent className="flex-grow pb-2 pt-1"> {/* Adjusted padding */}
         <CardDescription className="text-xs line-clamp-2 mb-1 h-8"> {/* Adjusted font, line-clamp, margin, height */}
-          {item.description}
+          {itemDescription}
         </CardDescription>
         <div className="flex items-center font-semibold text-primary text-sm"> {/* Adjusted font size */}
           <DollarSign className="h-4 w-4 mr-1" /> {/* Adjusted icon size */}
