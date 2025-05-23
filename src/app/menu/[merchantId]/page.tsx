@@ -4,14 +4,25 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import type { MenuItem, MenuCategory, MerchantProfile, CartItem } from "@/lib/types";
+import type { MenuItem, MenuCategory, MerchantProfile } from "@/lib/types"; // CartItem type is implicitly used by useCart
 import { MenuDisplayItem } from "./components/menu-display-item";
 import { useParams } from "next/navigation";
-import { UtensilsCrossed, Info, ShoppingBag, AlertTriangle, Loader2, Trash2, PlusCircle, MinusCircle, CreditCard, ShoppingCart } from "lucide-react";
+import { UtensilsCrossed, Info, ShoppingBag, AlertTriangle, Loader2, Trash2, PlusCircle, MinusCircle, CreditCard, ShoppingCart, ChevronUp } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"; // Keep Card for other uses if any, but not for main order display
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+  SheetFooter,
+  SheetClose,
+} from "@/components/ui/sheet";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useCart } from "@/hooks/use-cart";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase/config";
@@ -75,6 +86,7 @@ export default function MerchantMenuPage() {
 
       try {
         const merchantsCollectionRef = collection(db, "merchants");
+        // Query for merchant by publicMerchantId
         const merchantQuery = query(merchantsCollectionRef, where("publicMerchantId", "==", publicIdFromUrl), limit(1));
         const merchantQuerySnapshot = await getDocs(merchantQuery);
 
@@ -87,10 +99,11 @@ export default function MerchantMenuPage() {
           return;
         }
 
+        // Fetch menu items using publicMerchantId
         const menuItemsCollectionRef = collection(db, "menuItems");
         const itemsQuery = query(
           menuItemsCollectionRef, 
-          where("merchantId", "==", publicIdFromUrl),
+          where("merchantId", "==", publicIdFromUrl), // merchantId on menuItem is the publicMerchantId
           orderBy("createdAt", "desc")
         );
         const itemsQuerySnapshot = await getDocs(itemsQuery);
@@ -180,79 +193,7 @@ export default function MerchantMenuPage() {
         </p>
       </div>
 
-      {cartItems.length > 0 && (
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle className="text-2xl flex items-center">
-              <ShoppingCart className="mr-3 h-6 w-6" /> Your Order
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {cartItems.map((item) => (
-              <div key={item.id} className="flex items-start gap-4 p-3 border rounded-lg">
-                {item.imageUrl ? (
-                  <Image
-                    src={item.imageUrl}
-                    alt={item.name}
-                    width={60}
-                    height={60}
-                    className="rounded-md object-cover"
-                    data-ai-hint="food item"
-                  />
-                ) : (
-                  <div className="h-[60px] w-[60px] bg-secondary rounded-md flex items-center justify-center text-muted-foreground">
-                    <UtensilsCrossed size={24} />
-                  </div>
-                )}
-                <div className="flex-1">
-                  <h4 className="font-semibold">{item.name}</h4>
-                  <p className="text-sm text-muted-foreground">${item.price.toFixed(2)} each</p>
-                  <div className="flex items-center gap-2 mt-2">
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-7 w-7"
-                      onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                    >
-                      <MinusCircle className="h-4 w-4" />
-                    </Button>
-                    <span className="w-6 text-center">{item.quantity}</span>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-7 w-7"
-                      onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                    >
-                      <PlusCircle className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-                <div className="text-right">
-                    <p className="font-semibold">${(item.price * item.quantity).toFixed(2)}</p>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-muted-foreground hover:text-destructive h-7 w-7 mt-1"
-                      onClick={() => removeItem(item.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                </div>
-              </div>
-            ))}
-            <Separator />
-            <div className="flex justify-between items-center font-semibold text-lg">
-              <p>Subtotal:</p>
-              <p>${totalCartPrice.toFixed(2)}</p>
-            </div>
-            {cartItems.length > 0 && (
-                 <Button variant="outline" onClick={clearCart} className="w-full sm:w-auto">
-                    Clear Cart
-                </Button>
-            )}
-          </CardContent>
-        </Card>
-      )}
+      {/* The in-page "Your Order" Card is REMOVED. Details are now in the Sheet. */}
 
       {!isLoading && menuItems.length === 0 && !error && (
         <Alert variant="default" className="max-w-md mx-auto">
@@ -287,22 +228,106 @@ export default function MerchantMenuPage() {
         </section>
       ))}
 
-      {/* Sticky Bottom Bar */}
+      {/* Sticky Bottom Bar with Sheet Trigger and Payment Button */}
       {totalCartItems > 0 && (
         <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border shadow-lg p-4 z-50">
-          <div className="container mx-auto flex items-center justify-between">
-            <div>
-              <p className="text-lg font-semibold">
-                {totalCartItems} item{totalCartItems > 1 ? 's' : ''} in cart
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Total: <span className="font-bold text-primary">${totalCartPrice.toFixed(2)}</span>
-              </p>
-            </div>
+          <div className="container mx-auto flex items-center justify-between gap-4">
+            <Sheet>
+              <SheetTrigger asChild>
+                <div className="flex-grow cursor-pointer flex items-center group">
+                  <div>
+                    <p className="text-lg font-semibold group-hover:text-primary transition-colors">
+                      {totalCartItems} item{totalCartItems > 1 ? 's' : ''} in cart
+                    </p>
+                    <p className="text-sm text-muted-foreground group-hover:text-primary transition-colors">
+                      Total: <span className="font-bold text-primary">${totalCartPrice.toFixed(2)}</span>
+                    </p>
+                  </div>
+                  <ChevronUp className="ml-2 h-5 w-5 text-primary group-hover:text-accent transition-colors" />
+                </div>
+              </SheetTrigger>
+              <SheetContent side="bottom" className="max-h-[70vh] h-auto flex flex-col rounded-t-lg p-0">
+                <SheetHeader className="p-4 border-b">
+                  <SheetTitle className="text-2xl flex items-center">
+                    <ShoppingCart className="mr-3 h-6 w-6" /> Your Order
+                  </SheetTitle>
+                </SheetHeader>
+                <ScrollArea className="flex-grow">
+                  <div className="p-4 space-y-4">
+                    {cartItems.map((item) => (
+                      <div key={item.id} className="flex items-start gap-4 p-3 border rounded-lg bg-card hover:shadow-md transition-shadow">
+                        {item.imageUrl ? (
+                          <Image
+                            src={item.imageUrl}
+                            alt={item.name}
+                            width={60}
+                            height={60}
+                            className="rounded-md object-cover aspect-square"
+                            data-ai-hint="food item"
+                          />
+                        ) : (
+                          <div className="h-[60px] w-[60px] bg-secondary rounded-md flex items-center justify-center text-muted-foreground">
+                            <UtensilsCrossed size={24} />
+                          </div>
+                        )}
+                        <div className="flex-1">
+                          <h4 className="font-semibold">{item.name}</h4>
+                          <p className="text-sm text-muted-foreground">${item.price.toFixed(2)} each</p>
+                          <div className="flex items-center gap-2 mt-2">
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => item.quantity > 1 ? updateQuantity(item.id, item.quantity - 1) : removeItem(item.id)}
+                              aria-label="Decrease quantity"
+                            >
+                              <MinusCircle className="h-4 w-4" />
+                            </Button>
+                            <span className="w-6 text-center font-medium">{item.quantity}</span>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                              aria-label="Increase quantity"
+                            >
+                              <PlusCircle className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                            <p className="font-semibold">${(item.price * item.quantity).toFixed(2)}</p>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-muted-foreground hover:text-destructive h-7 w-7 mt-1"
+                              onClick={() => removeItem(item.id)}
+                              aria-label="Remove item"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                        </div>
+                      </div>
+                    ))}
+                     {cartItems.length === 0 && (
+                        <p className="text-muted-foreground text-center py-4">Your cart is empty.</p>
+                     )}
+                  </div>
+                </ScrollArea>
+                {cartItems.length > 0 && (
+                  <SheetFooter className="p-4 border-t bg-background">
+                    <Button variant="outline" onClick={() => { clearCart(); }} className="w-full"> {/* SheetClose can be added here if desired */}
+                      Clear Cart
+                    </Button>
+                  </SheetFooter>
+                )}
+              </SheetContent>
+            </Sheet>
+
             <Button 
               onClick={handleProceedToCheckout} 
               size="lg"
-              className="bg-accent hover:bg-accent/90 text-accent-foreground"
+              className="bg-accent hover:bg-accent/90 text-accent-foreground min-w-[180px]" // Added min-width
               disabled={cartItems.length === 0}
             >
               <CreditCard className="mr-2 h-5 w-5" />
