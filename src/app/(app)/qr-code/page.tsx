@@ -35,6 +35,8 @@ export default function QrCodePage() {
     if (!qrCodeUrl) return;
     const link = document.createElement('a');
     link.href = qrCodeUrl; 
+    // It's better to fetch the image as a blob if the server supports CORS and you need to control filename more reliably
+    // or if it's not a direct image link. However, for qrserver.com, direct link download works.
     link.download = `menu-qr-code-${publicMerchantId || 'unknown'}.png`;
     document.body.appendChild(link);
     link.click();
@@ -56,7 +58,7 @@ export default function QrCodePage() {
 
   if (isLoadingProfile) {
     return (
-      <div className="p-4 md:p-6 lg:p-8"> {/* Standard page padding */}
+      <div className="space-y-8 p-4 md:p-6 lg:p-8"> {/* Standard page padding */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight text-primary mb-2">Your Menu QR Code</h1>
           <p className="text-muted-foreground flex items-center">
@@ -91,7 +93,7 @@ export default function QrCodePage() {
 
   if (!publicMerchantId && !isLoadingProfile) {
     return (
-      <div className="p-4 md:p-6 lg:p-8"> {/* Standard page padding */}
+      <div className="space-y-8 p-4 md:p-6 lg:p-8"> {/* Standard page padding */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight text-primary mb-2">QR Code Unavailable</h1>
         </div>
@@ -108,7 +110,7 @@ export default function QrCodePage() {
   }
 
   return (
-    <div className="p-4 md:p-6 lg:p-8"> {/* Standard page padding */}
+    <div className="space-y-8 p-4 md:p-6 lg:p-8"> {/* Standard page padding */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold tracking-tight text-primary mb-2">Your Menu QR Code</h1>
         <p className="text-muted-foreground">
