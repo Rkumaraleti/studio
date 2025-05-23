@@ -97,7 +97,7 @@ export default function MerchantMenuPage() {
         const menuItemsCollectionRef = collection(db, "menuItems");
         const itemsQuery = query(
           menuItemsCollectionRef, 
-          where("merchantId", "==", publicIdFromUrl),
+          where("merchantId", "==", publicIdFromUrl), // Querying against publicMerchantId stored in menuItems
           orderBy("createdAt", "desc")
         );
         const itemsQuerySnapshot = await getDocs(itemsQuery);
@@ -229,7 +229,7 @@ export default function MerchantMenuPage() {
           <Sheet>
             <SheetTrigger asChild>
               <div className="flex-grow cursor-pointer flex items-center group">
-                {totalCartItems > 0 ? (
+                {cartItems.length > 0 ? (
                   <div>
                     <p className="text-lg font-semibold group-hover:text-primary transition-colors">
                       {totalCartItems} item{totalCartItems !== 1 ? 's' : ''} in cart
@@ -344,9 +344,9 @@ export default function MerchantMenuPage() {
       
       <footer className="py-6 md:px-6 md:py-0 border-t mt-12">
           <div className="container mx-auto flex flex-col items-center justify-between gap-4 md:h-20 md:flex-row">
-            <p className="text-balance text-center text-sm leading-loose text-muted-foreground md:text-left">
+            <div className="text-balance text-center text-sm leading-loose text-muted-foreground md:text-left"> {/* Changed p to div */}
               Powered by <AppLogo showText={false} size={16} className="inline-block align-middle" /> QR Plus.
-            </p>
+            </div>
             <p className="text-sm text-muted-foreground">
               &copy; {new Date().getFullYear()} {restaurantName}. All Rights Reserved.
             </p>
@@ -355,3 +355,4 @@ export default function MerchantMenuPage() {
     </div>
   );
 }
+
