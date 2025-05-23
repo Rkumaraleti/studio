@@ -1,7 +1,8 @@
+
 {
-  "name": "QR Plus Menu",
+  "name": "QR Plus - Digital Menus",
   "short_name": "QR Plus",
-  "description": "Digital Menu by QR Plus",
+  "description": "Create, customize, and share your digital menu with QR Plus.",
   "icons": [
     {
       "src": "/icon-192x192.png",
@@ -16,9 +17,10 @@
       "purpose": "any maskable"
     }
   ],
-  "theme_color": "#2B8EFF",
-  "background_color": "#F0F4F8",
+  "theme_color": "#1A75D6",
+  "background_color": "#F2F5FA",
   "start_url": "/menu/",
   "display": "standalone",
-  "orientation": "portrait"
+  "orientation": "portrait",
+  "scope": "/menu/"
 }

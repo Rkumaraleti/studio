@@ -54,7 +54,7 @@ export default function DashboardPage() {
           where("merchantPublicId", "==", publicMerchantId),
           where("createdAt", ">=", startOfTodayTimestamp),
           where("createdAt", "<=", endOfTodayTimestamp),
-          orderBy("createdAt", "desc") // Added this to align with existing enabled index
+          orderBy("createdAt", "desc") 
         );
         const ordersSnapshot = await getCountFromServer(ordersQuery);
         const todaysOrdersCount = ordersSnapshot.data().count;
@@ -105,10 +105,10 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      <Card className="shadow-lg bg-gradient-to-br from-card via-card to-secondary/10 border-border">
-        <CardHeader className="bg-primary/5 dark:bg-primary/10 rounded-t-lg p-6">
-          <CardTitle className="text-3xl text-primary">Welcome Back, Merchant!</CardTitle>
-          <CardDescription className="text-muted-foreground">Here's what's happening with your QR Plus menu today.</CardDescription>
+      <Card className="shadow-lg bg-card border-border">
+        <CardHeader className="bg-gradient-to-r from-primary to-[hsl(210,70%,55%)] text-primary-foreground rounded-t-lg p-6">
+          <CardTitle className="text-3xl">Welcome Back, Merchant!</CardTitle>
+          <CardDescription className="text-primary-foreground/80">Here's what's happening with your QR Plus menu today.</CardDescription>
         </CardHeader>
       </Card>
 
@@ -164,4 +164,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-

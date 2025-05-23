@@ -70,7 +70,7 @@ export default function PublicMenuLayout({
       <>
         <Head>
           <link rel="manifest" href="/manifest.json" />
-          <meta name="theme-color" content="#2B8EFF" /> 
+          <meta name="theme-color" content="#1A75D6" /> 
           <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
           <meta name="apple-mobile-web-app-capable" content="yes" />
           <meta name="apple-mobile-web-app-status-bar-style" content="default" /> 
@@ -78,8 +78,8 @@ export default function PublicMenuLayout({
         </Head>
         
         <div className="flex flex-col min-h-screen">
-          <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur-sm">
-            <div className="flex h-14 items-center justify-between px-4 sm:px-6 lg:px-8">
+          <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur-sm px-4 sm:px-6 lg:px-8">
+            <div className="flex h-14 items-center justify-between">
               <Link href={`/menu/${resolvedParams.merchantId}`} className="flex items-center gap-2 group">
                 <Utensils className="h-6 w-6 text-primary group-hover:text-accent transition-colors" />
                 {headerData.loading ? (
@@ -94,7 +94,7 @@ export default function PublicMenuLayout({
               </Link>
             </div>
           </header>
-          <main className="flex-1 py-6 px-4 sm:px-6 lg:px-8 pb-28"> {/* Added pb-28 for sticky bottom bar */}
+          <main className="flex-1 py-6 px-4 sm:px-6 lg:px-8 pb-28">
             {children}
           </main>
         </div>
