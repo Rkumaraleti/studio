@@ -18,7 +18,7 @@ import {
   SheetTrigger,
   SheetFooter,
 } from "@/components/ui/sheet";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"; // Added ScrollBar
 import { useCart } from "@/hooks/use-cart";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase/config";
@@ -63,7 +63,7 @@ export default function MerchantMenuPage() {
   } = useCart();
   const { toast } = useToast();
 
-  const totalCartItems = getTotalItems(); // Sum of quantities of all item types
+  const totalCartItems = getTotalItems();
   const totalCartPrice = getTotalPrice();
 
   useEffect(() => {
@@ -97,7 +97,7 @@ export default function MerchantMenuPage() {
         const menuItemsCollectionRef = collection(db, "menuItems");
         const itemsQuery = query(
           menuItemsCollectionRef, 
-          where("merchantId", "==", publicIdFromUrl),
+          where("merchantId", "==", publicIdFromUrl), // This should be publicMerchantId
           orderBy("createdAt", "desc")
         );
         const itemsQuerySnapshot = await getDocs(itemsQuery);
@@ -121,7 +121,7 @@ export default function MerchantMenuPage() {
   }, [publicIdFromUrl]);
 
   const handleProceedToCheckout = () => {
-    if (cartItems.length === 0) { // or totalCartItems === 0
+    if (totalCartItems === 0) {
       toast({
         title: "Cart is Empty",
         description: "Please add items to your cart before proceeding to checkout.",
@@ -203,11 +203,14 @@ export default function MerchantMenuPage() {
             {category.name}
           </h2>
           {category.items.length > 0 ? (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {category.items.map((item) => (
-                <MenuDisplayItem key={item.id} item={item} />
-              ))}
-            </div>
+            <ScrollArea className="w-full whitespace-nowrap pb-4">
+              <div className="flex space-x-4">
+                {category.items.map((item) => (
+                  <MenuDisplayItem key={item.id} item={item} />
+                ))}
+              </div>
+              <ScrollBar orientation="horizontal" />
+            </ScrollArea>
           ) : (
             <Alert>
               <Info className="h-4 w-4" />
@@ -220,7 +223,6 @@ export default function MerchantMenuPage() {
         </section>
       ))}
 
-      {/* Sticky Bottom Bar: Shows if there is at least one type of item in cart */}
       {cartItems.length > 0 && (
         <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border shadow-lg p-4 z-50">
           <div className="container mx-auto flex items-center justify-between gap-4">
@@ -246,7 +248,7 @@ export default function MerchantMenuPage() {
                 </SheetHeader>
                 <ScrollArea className="flex-grow">
                   <div className="p-4 space-y-4">
-                    {cartItems.map((cartItemEntry) => ( // Renamed to avoid conflict with outer `item`
+                    {cartItems.map((cartItemEntry) => (
                       <div key={cartItemEntry.id} className="flex items-start gap-4 p-3 border rounded-lg bg-card hover:shadow-md transition-shadow">
                         {cartItemEntry.imageUrl ? (
                           <Image
@@ -306,7 +308,7 @@ export default function MerchantMenuPage() {
                      )}
                   </div>
                 </ScrollArea>
-                {cartItems.length > 0 && ( // Show clear cart button only if there are items
+                {cartItems.length > 0 && (
                   <SheetFooter className="p-4 border-t bg-background">
                     <Button variant="outline" onClick={clearCart} className="w-full">
                       Clear Cart
@@ -320,7 +322,7 @@ export default function MerchantMenuPage() {
               onClick={handleProceedToCheckout} 
               size="lg"
               className="bg-accent hover:bg-accent/90 text-accent-foreground min-w-[180px]"
-              disabled={totalCartItems === 0} // Disable if total quantity is 0
+              disabled={totalCartItems === 0}
             >
               <CreditCard className="mr-2 h-5 w-5" />
               Pay ${totalCartPrice.toFixed(2)}

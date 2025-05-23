@@ -35,7 +35,7 @@ export function MenuDisplayItem({ item }: MenuDisplayItemProps) {
   };
 
   return (
-    <Card className="overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300 flex flex-col h-full group">
+    <Card className="overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300 flex flex-col h-full group w-72 flex-shrink-0"> {/* Added w-72 and flex-shrink-0 */}
       <div className="relative w-full aspect-[4/3]">
         {item.imageUrl ? (
           <Image
@@ -53,10 +53,10 @@ export function MenuDisplayItem({ item }: MenuDisplayItemProps) {
         )}
       </div>
       <CardHeader className="pb-2">
-        <CardTitle className="text-xl">{item.name}</CardTitle>
+        <CardTitle className="text-xl truncate">{item.name}</CardTitle> {/* Added truncate for long names */}
       </CardHeader>
       <CardContent className="flex-grow pb-3">
-        <CardDescription className="text-sm line-clamp-3 mb-2">
+        <CardDescription className="text-sm line-clamp-3 mb-2 h-16"> {/* Added h-16 for consistent height */}
           {item.description}
         </CardDescription>
         <div className="flex items-center font-semibold text-primary">
