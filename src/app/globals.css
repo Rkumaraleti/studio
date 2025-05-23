@@ -9,97 +9,97 @@ body {
 
 @layer base {
   :root {
-    --background: 270 50% 98%; /* Very Pale Lilac */
-    --foreground: 270 20% 25%; /* Dark Slate Purple */
+    --background: 180 20% 97%; /* Very Light Teal/Almost White */
+    --foreground: 180 30% 20%; /* Dark Teal Blue */
 
     --card: 0 0% 100%; /* White */
-    --card-foreground: 270 20% 25%; /* Dark Slate Purple */
+    --card-foreground: 180 30% 20%; /* Dark Teal Blue */
 
     --popover: 0 0% 100%;
-    --popover-foreground: 270 20% 25%; /* Dark Slate Purple */
+    --popover-foreground: 180 30% 20%; /* Dark Teal Blue */
 
-    --primary: 270 65% 70%; /* Pale Purple */
+    --primary: 175 70% 40%; /* Vibrant Teal */
     --primary-foreground: 0 0% 100%; /* White */
 
-    --secondary: 270 60% 94%; /* Lighter Pale Purple */
-    --secondary-foreground: 270 65% 60%; /* Medium Pale Purple */
+    --secondary: 175 60% 92%; /* Light Teal */
+    --secondary-foreground: 175 70% 35%; /* Medium Teal */
 
-    --muted: 270 50% 96%; /* Very Light Pale Purple */
-    --muted-foreground: 270 25% 55%; /* Greyish Pale Purple */
+    --muted: 180 30% 95%; /* Very Light Greyish Teal */
+    --muted-foreground: 180 25% 50%; /* Greyish Teal */
 
-    --accent: 280 70% 75%; /* Brighter Lilac */
+    --accent: 170 75% 45%; /* Slightly Greener Teal for Accent */
     --accent-foreground: 0 0% 100%; /* White */
 
     --destructive: 0 72% 51%; /* Red: #E53E3E */
     --destructive-foreground: 0 0% 98%;
 
-    --border: 270 40% 90%; /* Pale Lilac Border */
-    --input: 270 40% 90%; /* Pale Lilac Border */
-    --ring: 270 65% 70%; /* Primary color for rings */
+    --border: 180 20% 88%; /* Light Teal Border */
+    --input: 180 20% 88%; /* Light Teal Border */
+    --ring: 175 70% 40%; /* Primary color for rings */
 
     --radius: 0.5rem;
 
     /* Sidebar specific theme variables */
-    --sidebar-background: 270 60% 97%; /* Lighter Pale Lilac for Sidebar */
-    --sidebar-foreground: 270 20% 30%; /* Darker Slate Purple for Sidebar Text */
-    --sidebar-primary: 270 65% 70%; /* Pale Purple */
+    --sidebar-background: 180 25% 96%; /* Light Greyish Teal for Sidebar */
+    --sidebar-foreground: 180 30% 25%; /* Darker Teal Blue for Sidebar Text */
+    --sidebar-primary: 175 70% 40%; /* Vibrant Teal */
     --sidebar-primary-foreground: 0 0% 100%; /* White */
-    --sidebar-accent: 280 70% 75%; /* Brighter Lilac */
+    --sidebar-accent: 170 75% 45%; /* Slightly Greener Teal for Accent */
     --sidebar-accent-foreground: 0 0% 100%; /* White */
-    --sidebar-border: 270 40% 92%; /* Slightly Lighter Lilac Border for Sidebar */
-    --sidebar-ring: 270 65% 70%;
+    --sidebar-border: 180 20% 90%; /* Lighter Teal Border for Sidebar */
+    --sidebar-ring: 175 70% 40%;
 
-    --chart-1: 270 65% 70%;
-    --chart-2: 260 60% 75%;
-    --chart-3: 280 50% 70%;
-    --chart-4: 250 65% 80%;
-    --chart-5: 275 40% 60%;
+    --chart-1: 175 70% 40%;
+    --chart-2: 170 60% 45%;
+    --chart-3: 180 50% 50%;
+    --chart-4: 175 65% 55%;
+    --chart-5: 170 40% 60%;
   }
 
   .dark {
-    --background: 270 15% 12%; /* Very Dark Purple */
-    --foreground: 270 30% 88%; /* Light Lilac Grey */
+    --background: 180 15% 10%; /* Very Dark Teal Blue */
+    --foreground: 180 25% 90%; /* Light Greyish Teal */
 
-    --card: 270 15% 15%; /* Darker Purple */
-    --card-foreground: 270 30% 88%; /* Light Lilac Grey */
+    --card: 180 15% 13%; /* Darker Teal Blue */
+    --card-foreground: 180 25% 90%; /* Light Greyish Teal */
 
-    --popover: 270 15% 12%; /* Very Dark Purple */
-    --popover-foreground: 270 30% 88%; /* Light Lilac Grey */
+    --popover: 180 15% 10%; /* Very Dark Teal Blue */
+    --popover-foreground: 180 25% 90%; /* Light Greyish Teal */
 
-    --primary: 270 70% 75%; /* Brighter Pale Purple (Dark Mode) */
-    --primary-foreground: 270 10% 15%; /* Very Dark Purple for text on primary */
+    --primary: 175 65% 55%; /* Brighter Teal (Dark Mode) */
+    --primary-foreground: 180 10% 10%; /* Very Dark Teal for text on primary */
 
-    --secondary: 270 15% 20%; /* Dark Greyish Purple */
-    --secondary-foreground: 270 70% 70%; /* Pale Purple for text on secondary */
+    --secondary: 180 15% 18%; /* Dark Greyish Teal */
+    --secondary-foreground: 175 60% 70%; /* Lighter Teal for text on secondary */
 
-    --muted: 270 15% 22%; /* Slightly Lighter Dark Greyish Purple */
-    --muted-foreground: 270 20% 60%; /* Medium Lilac Grey */
+    --muted: 180 15% 20%; /* Slightly Lighter Dark Greyish Teal */
+    --muted-foreground: 180 20% 60%; /* Medium Greyish Teal */
 
-    --accent: 280 75% 80%; /* Vibrant Lilac (Dark Mode) */
-    --accent-foreground: 280 10% 10%; /* Very Dark Magenta for text */
+    --accent: 170 70% 60%; /* Brighter Greener Teal (Dark Mode) */
+    --accent-foreground: 170 10% 10%; /* Very Dark Teal for text on accent */
 
     --destructive: 0 65% 55%; /* Red: #DE5151 */
     --destructive-foreground: 0 0% 98%;
 
-    --border: 270 10% 30%; /* Dark Purple Border */
-    --input: 270 10% 30%; /* Dark Purple Border */
-    --ring: 270 70% 75%; /* Bright Purple for rings */
+    --border: 180 10% 25%; /* Dark Teal Border */
+    --input: 180 10% 25%; /* Dark Teal Border */
+    --ring: 175 65% 55%; /* Bright Teal for rings */
 
     /* Sidebar specific theme variables */
-    --sidebar-background: 270 15% 10%; /* Even Darker Purple for Sidebar */
-    --sidebar-foreground: 270 30% 85%; /* Lighter Lilac Grey for Sidebar Text */
-    --sidebar-primary: 270 70% 75%; /* Dark Mode Primary */
-    --sidebar-primary-foreground: 270 10% 15%; /* Dark Mode Primary Foreground */
-    --sidebar-accent: 280 75% 80%; /* Dark Mode Accent */
-    --sidebar-accent-foreground: 280 10% 10%; /* Dark Mode Accent Foreground */
-    --sidebar-border: 270 10% 25%; /* Darker Border for Sidebar */
-    --sidebar-ring: 270 70% 75%;
+    --sidebar-background: 180 15% 8%; /* Even Darker Teal for Sidebar */
+    --sidebar-foreground: 180 25% 88%; /* Lighter Greyish Teal for Sidebar Text */
+    --sidebar-primary: 175 65% 55%; /* Dark Mode Primary */
+    --sidebar-primary-foreground: 180 10% 10%; /* Dark Mode Primary Foreground */
+    --sidebar-accent: 170 70% 60%; /* Dark Mode Accent */
+    --sidebar-accent-foreground: 170 10% 10%; /* Dark Mode Accent Foreground */
+    --sidebar-border: 180 10% 20%; /* Darker Border for Sidebar */
+    --sidebar-ring: 175 65% 55%;
 
-    --chart-1: 270 70% 75%;
-    --chart-2: 260 70% 80%;
-    --chart-3: 280 60% 75%;
-    --chart-4: 250 75% 85%;
-    --chart-5: 275 50% 70%;
+    --chart-1: 175 65% 55%;
+    --chart-2: 170 65% 60%;
+    --chart-3: 180 55% 55%;
+    --chart-4: 175 70% 65%;
+    --chart-5: 170 45% 70%;
   }
 }
 

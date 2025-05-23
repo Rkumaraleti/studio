@@ -1,8 +1,7 @@
-
 {
   "name": "QR Plus Menu",
   "short_name": "QR Menu",
-  "description": "Your digital menu, instantly accessible.",
+  "description": "Digital Menu powered by QR Plus.",
   "icons": [
     {
       "src": "/icon-192x192.png",
@@ -17,9 +16,9 @@
       "purpose": "any maskable"
     }
   ],
+  "theme_color": "#21A18C",
+  "background_color": "#F2F9F9",
   "start_url": "/menu/",
   "display": "standalone",
-  "scope": "/menu/",
-  "theme_color": "#6A4DBC",
-  "background_color": "#F2F0FA"
+  "scope": "/menu/"
 }
