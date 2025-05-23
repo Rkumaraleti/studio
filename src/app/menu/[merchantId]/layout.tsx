@@ -45,6 +45,7 @@ export default function PublicMenuLayout({
       setHeaderData(prev => ({ ...prev, loading: true, error: null }));
       try {
         const merchantsCollectionRef = collection(db, "merchants");
+        // Query by publicMerchantId
         const merchantQuery = query(merchantsCollectionRef, where("publicMerchantId", "==", resolvedParams.merchantId), limit(1));
         const merchantQuerySnapshot = await getDocs(merchantQuery);
 
@@ -69,8 +70,7 @@ export default function PublicMenuLayout({
       <>
         <Head>
           <link rel="manifest" href="/manifest.json" />
-          {/* Updated theme-color to match new Slate Blue primary */}
-          <meta name="theme-color" content="#597399" /> 
+          <meta name="theme-color" content="#2B8EFF" /> 
           <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
           <meta name="apple-mobile-web-app-capable" content="yes" />
           <meta name="apple-mobile-web-app-status-bar-style" content="default" /> 
@@ -94,7 +94,7 @@ export default function PublicMenuLayout({
               </Link>
             </div>
           </header>
-          <main className="flex-1 py-6 px-4 sm:px-6 lg:px-8 pb-28">
+          <main className="flex-1 py-6 px-4 sm:px-6 lg:px-8 pb-28"> {/* Added pb-28 for sticky bottom bar */}
             {children}
           </main>
         </div>
