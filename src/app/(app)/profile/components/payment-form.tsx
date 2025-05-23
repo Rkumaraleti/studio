@@ -16,8 +16,9 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Banknote, Save, ShieldCheck, Loader2, Info } from "lucide-react";
+import { Banknote, Save, ShieldCheck, Loader2, Info, Building } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { useMerchantProfile } from "@/hooks/use-merchant-profile";
@@ -26,6 +27,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const paymentFormSchema = z.object({
   restaurantName: z.string().min(2, "Restaurant name is required"),
+  restaurantDescription: z.string().max(200, "Description must be 200 characters or less").optional(),
   currency: z.string().length(3, "Currency code must be 3 letters, e.g., USD").toUpperCase(),
   paymentGatewayConfigured: z.boolean().default(false),
   paymentGatewayAccountId: z.string().optional(),
@@ -35,13 +37,13 @@ type PaymentFormData = z.infer<typeof paymentFormSchema>;
 
 export function PaymentForm() {
   const { toast } = useToast();
-  // Get publicMerchantId from the hook
   const { profile, isLoadingProfile, updateProfile, publicMerchantId, authUserId } = useMerchantProfile();
 
   const form = useForm<PaymentFormData>({
     resolver: zodResolver(paymentFormSchema),
     defaultValues: {
       restaurantName: "",
+      restaurantDescription: "",
       currency: "USD",
       paymentGatewayConfigured: false,
       paymentGatewayAccountId: "",
@@ -52,6 +54,7 @@ export function PaymentForm() {
     if (profile) {
       form.reset({
         restaurantName: profile.restaurantName || "",
+        restaurantDescription: profile.restaurantDescription || "",
         currency: profile.currency || "USD",
         paymentGatewayConfigured: profile.paymentGatewayConfigured || false,
         paymentGatewayAccountId: profile.paymentGatewayAccountId || "",
@@ -61,12 +64,14 @@ export function PaymentForm() {
 
   async function onSubmit(data: PaymentFormData) {
     try {
-      // Ensure not to pass publicMerchantId or id in the update object from form data
-      const { ...updateData } = data;
+      const updateData = { ...data };
+      if (updateData.restaurantDescription === "") {
+        updateData.restaurantDescription = undefined; // Ensure empty string becomes undefined for Firestore
+      }
       await updateProfile(updateData);
       toast({
         title: "Profile Updated",
-        description: "Your restaurant and payment settings have been saved.",
+        description: "Your restaurant information has been saved.",
       });
     } catch (error) {
       toast({
@@ -94,7 +99,7 @@ export function PaymentForm() {
     );
   }
 
-  if (!profile && !isLoadingProfile && authUserId) { // Check authUserId to see if user is logged in
+  if (!profile && !isLoadingProfile && authUserId) {
      return (
       <Card className="shadow-lg max-w-2xl mx-auto">
         <CardHeader>
@@ -107,7 +112,7 @@ export function PaymentForm() {
     );
   }
   
-  if (!authUserId && !isLoadingProfile) { // No authenticated user
+  if (!authUserId && !isLoadingProfile) {
      return (
       <Card className="shadow-lg max-w-2xl mx-auto">
         <CardHeader>
@@ -120,16 +125,15 @@ export function PaymentForm() {
     );
   }
 
-
   return (
     <Card className="shadow-lg max-w-2xl mx-auto">
       <CardHeader>
         <CardTitle className="text-2xl flex items-center">
-          <Banknote className="mr-2 h-6 w-6" />
-          Restaurant & Payment Settings
+          <Building className="mr-2 h-6 w-6" />
+          Restaurant Information
         </CardTitle>
         <CardDescription>
-          Manage your restaurant details. Your Public Menu ID is: <strong>{publicMerchantId || "Generating..."}</strong>
+          Manage your restaurant details and payment configurations. Your Public Menu ID is: <strong>{publicMerchantId || "Generating..."}</strong>
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -148,6 +152,26 @@ export function PaymentForm() {
                 </FormItem>
               )}
             />
+
+            <FormField
+              control={form.control}
+              name="restaurantDescription"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Restaurant Description (Optional)</FormLabel>
+                  <FormControl>
+                    <Textarea 
+                      placeholder="Tell customers a bit about your restaurant (e.g., cuisine type, specialties, ambiance)." 
+                      {...field} 
+                      rows={3}
+                    />
+                  </FormControl>
+                  <FormDescription>This will appear on your public menu page. Max 200 characters.</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <FormField
               control={form.control}
               name="currency"
@@ -163,7 +187,7 @@ export function PaymentForm() {
               )}
             />
 
-            <SeparatorWithText text="Payment Gateway Configuration" />
+            <SeparatorWithText text="Payment Gateway Configuration" icon={<Banknote className="mr-2 h-5 w-5" />} />
             
             <FormField
               control={form.control}
@@ -227,14 +251,17 @@ export function PaymentForm() {
   );
 }
 
-function SeparatorWithText({text}: {text: string}) {
+function SeparatorWithText({text, icon}: {text: string; icon?: React.ReactNode}) {
   return (
-    <div className="relative my-6">
+    <div className="relative my-8 pt-4">
       <div className="absolute inset-0 flex items-center">
         <span className="w-full border-t" />
       </div>
-      <div className="relative flex justify-center text-xs uppercase">
-        <span className="bg-card px-2 text-muted-foreground">{text}</span>
+      <div className="relative flex justify-center text-sm uppercase">
+        <span className="bg-card px-3 text-muted-foreground flex items-center">
+          {icon}
+          {text}
+        </span>
       </div>
     </div>
   );

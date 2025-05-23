@@ -24,7 +24,6 @@ import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase/config";
 import { collection, query, where, getDocs, orderBy, limit } from "firebase/firestore";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AppLogo } from "@/components/common/app-logo";
 
 // Helper to group items by category
 const groupByCategory = (items: MenuItem[]): MenuCategory[] => {
@@ -47,7 +46,7 @@ export default function MerchantMenuPage() {
   const publicIdFromUrl = params.merchantId as string;
   
   const [merchantProfile, setMerchantProfile] = useState<MerchantProfile | null>(null);
-  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  // menuItems state is no longer needed here if we directly set menuCategories
   const [menuCategories, setMenuCategories] = useState<MenuCategory[]>([]);
   
   const [isLoading, setIsLoading] = useState(true);
@@ -77,28 +76,32 @@ export default function MerchantMenuPage() {
       setIsLoading(true);
       setError(null);
       setMerchantProfile(null);
-      setMenuItems([]);
       setMenuCategories([]);
 
       try {
+        // Fetch merchant profile (for description, primarily)
         const merchantsCollectionRef = collection(db, "merchants");
         const merchantQuery = query(merchantsCollectionRef, where("publicMerchantId", "==", publicIdFromUrl), limit(1));
         const merchantQuerySnapshot = await getDocs(merchantQuery);
 
+        let fetchedMerchantProfile: MerchantProfile | null = null;
         if (!merchantQuerySnapshot.empty) {
           const merchantDoc = merchantQuerySnapshot.docs[0];
-          setMerchantProfile({ id: merchantDoc.id, ...merchantDoc.data() } as MerchantProfile);
+          fetchedMerchantProfile = { id: merchantDoc.id, ...merchantDoc.data() } as MerchantProfile;
+          setMerchantProfile(fetchedMerchantProfile);
         } else {
           setError("Restaurant profile not found for this ID.");
           setIsLoading(false);
           return;
         }
 
+        // Fetch menu items
         const menuItemsCollectionRef = collection(db, "menuItems");
         const itemsQuery = query(
           menuItemsCollectionRef, 
-          where("merchantId", "==", publicIdFromUrl), // Querying against publicMerchantId stored in menuItems
-          orderBy("createdAt", "desc")
+          where("merchantId", "==", publicIdFromUrl),
+          orderBy("category"), // Order by category then by name if needed in groupByCategory
+          orderBy("name")
         );
         const itemsQuerySnapshot = await getDocs(itemsQuery);
         
@@ -106,7 +109,6 @@ export default function MerchantMenuPage() {
         itemsQuerySnapshot.forEach((doc) => {
           fetchedItems.push({ id: doc.id, ...doc.data() } as MenuItem);
         });
-        setMenuItems(fetchedItems);
         setMenuCategories(groupByCategory(fetchedItems));
 
       } catch (err) {
@@ -136,21 +138,27 @@ export default function MerchantMenuPage() {
     });
   };
   
-  const restaurantName = merchantProfile?.restaurantName || `Digital Menu`;
-
   if (isLoading) {
     return (
-      <div className="space-y-12">
-        <div className="text-center border-b pb-4 pt-2">
-          <Skeleton className="w-16 h-16 object-cover rounded-lg mb-2 shadow-sm mx-auto" />
-          <Skeleton className="h-6 w-1/3 sm:w-1/4 mx-auto mb-1" />
-          <Skeleton className="h-4 w-full max-w-xs mx-auto" />
-        </div>
+      <div className="space-y-8">
         <div className="text-center py-10 flex flex-col items-center justify-center">
-          <Loader2 className="h-16 w-16 text-primary animate-spin mb-4" />
-          <h2 className="text-2xl font-semibold mb-2">Loading Menu...</h2>
-          <p className="text-muted-foreground">Please wait while we fetch the delicious items.</p>
+          <Loader2 className="h-12 w-12 text-primary animate-spin mb-4" />
+          <h2 className="text-xl font-semibold mb-2">Loading Menu...</h2>
+          <p className="text-muted-foreground text-sm">Please wait while we fetch the delicious items.</p>
         </div>
+        {/* Skeleton for description */}
+        <Skeleton className="h-4 w-3/4 mx-auto mb-6" /> 
+        {/* Skeleton for categories and items */}
+        {[1, 2].map(i => (
+          <section key={i} className="mb-6">
+            <Skeleton className="h-6 w-1/3 mb-3" />
+            <div className="flex space-x-4 overflow-hidden pb-2">
+              {[1, 2, 3].map(j => (
+                <Skeleton key={j} className="h-72 w-60 rounded-lg flex-shrink-0" />
+              ))}
+            </div>
+          </section>
+        ))}
       </div>
     );
   }
@@ -169,26 +177,21 @@ export default function MerchantMenuPage() {
 
   return (
     <div className="space-y-6">
-      <div className="text-center border-b pb-4 pt-2">
-        <Image 
-            src={`https://placehold.co/64x64.png`} 
-            alt={`${restaurantName} Logo`}
-            width={64} 
-            height={64} 
-            className="w-16 h-16 object-cover rounded-lg mb-2 shadow-sm mx-auto" 
-            data-ai-hint="restaurant icon"
-            priority 
-        />
-        <h1 className="text-xl font-semibold tracking-tight text-primary mb-0.5">
-          {restaurantName}
-        </h1>
-        <p className="max-w-md mx-auto text-xs text-muted-foreground">
-          Browse our offerings and add your favorites to your order.
+      {/* Restaurant Description - placed above menu items */}
+      {merchantProfile?.restaurantDescription && (
+        <p className="text-sm text-muted-foreground text-center mb-6 px-2">
+          {merchantProfile.restaurantDescription}
         </p>
-      </div>
+      )}
+       {!merchantProfile?.restaurantDescription && !isLoading && menuCategories.length > 0 && (
+         <p className="text-sm text-muted-foreground text-center mb-6 px-2">
+          Welcome! Browse our menu and add your favorites to your order.
+        </p>
+       )}
 
-      {!isLoading && menuItems.length === 0 && !error && (
-        <Alert variant="default" className="max-w-md mx-auto">
+
+      {!isLoading && menuCategories.length === 0 && !error && (
+        <Alert variant="default" className="max-w-md mx-auto mt-8">
           <ShoppingBag className="h-5 w-5" />
           <AlertTitle>Menu Coming Soon!</AlertTitle>
           <AlertDescription>
@@ -333,7 +336,7 @@ export default function MerchantMenuPage() {
           <Button 
             onClick={handleProceedToCheckout} 
             size="lg"
-            className="bg-accent hover:bg-accent/90 text-accent-foreground min-w-[160px]" // Slightly reduced min-width
+            className="bg-accent hover:bg-accent/90 text-accent-foreground min-w-[150px]"
             disabled={totalCartItems === 0}
           >
             <CreditCard className="mr-2 h-5 w-5" />
@@ -345,14 +348,13 @@ export default function MerchantMenuPage() {
       <footer className="py-6 md:px-6 md:py-0 border-t mt-12">
           <div className="container mx-auto flex flex-col items-center justify-between gap-4 md:h-20 md:flex-row">
             <div className="text-balance text-center text-sm leading-loose text-muted-foreground md:text-left">
-              Powered by <AppLogo showText={false} size={16} className="inline-block align-middle" /> QR Plus.
+              Powered by <Link href="/" className="font-semibold text-primary hover:underline">QR Plus</Link>.
             </div>
             <p className="text-sm text-muted-foreground">
-              &copy; {new Date().getFullYear()} {restaurantName}. All Rights Reserved.
+              &copy; {new Date().getFullYear()} {merchantProfile?.restaurantName || "Your Restaurant"}. All Rights Reserved.
             </p>
           </div>
         </footer>
     </div>
   );
 }
-

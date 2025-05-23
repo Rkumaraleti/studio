@@ -37,9 +37,11 @@ export interface MerchantProfile {
   id: string; // Firebase UID, this IS the document ID in 'merchants' collection
   publicMerchantId: string; // The new publicly shareable, generated merchant ID
   restaurantName: string;
+  restaurantDescription?: string; // Optional description for the restaurant
   paymentGatewayConfigured: boolean; 
   paymentGatewayAccountId?: string;
   currency: string; // e.g., "USD"
   createdAt?: any; // Firestore Timestamp
   updatedAt?: any; // Firestore Timestamp
 }
+

@@ -11,6 +11,7 @@ import { doc, getDoc, setDoc, onSnapshot, collection, serverTimestamp } from 'fi
 // Default data for a new merchant profile, EXCLUDING id and publicMerchantId
 const defaultNewProfileData: Omit<MerchantProfile, 'id' | 'publicMerchantId' | 'createdAt' | 'updatedAt'> = {
   restaurantName: "My Awesome Restaurant",
+  restaurantDescription: "Serving the best food in town!",
   currency: "USD",
   paymentGatewayConfigured: false,
   paymentGatewayAccountId: "",
@@ -60,9 +61,14 @@ export function useMerchantProfile() {
           const updatedProfileWithPublicId: MerchantProfile = {
             ...existingData,
             publicMerchantId: newPublicId,
+            restaurantDescription: existingData.restaurantDescription || defaultNewProfileData.restaurantDescription, // Ensure description exists
             updatedAt: serverTimestamp(),
           };
-          await setDoc(profileDocRef, { publicMerchantId: newPublicId, updatedAt: serverTimestamp() }, { merge: true });
+          await setDoc(profileDocRef, { 
+            publicMerchantId: newPublicId, 
+            restaurantDescription: updatedProfileWithPublicId.restaurantDescription,
+            updatedAt: serverTimestamp() 
+          }, { merge: true });
           setProfile(updatedProfileWithPublicId); // Optimistically update state
           setPublicMerchantId(newPublicId);
         }
