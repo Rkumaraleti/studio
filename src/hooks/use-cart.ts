@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
@@ -8,7 +9,7 @@ const CART_STORAGE_KEY = 'qrPlusCart';
 
 export function useCart() {
   const [items, setItems] = useState<CartItem[]>([]);
-  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isCartOpen, setIsCartOpen] = useState(false); // This might be vestigial if cart is always a sheet
   const { toast } = useToast();
 
   // Load cart from localStorage on initial render
@@ -16,7 +17,18 @@ export function useCart() {
     if (typeof window !== 'undefined') {
       const storedCart = localStorage.getItem(CART_STORAGE_KEY);
       if (storedCart) {
-        setItems(JSON.parse(storedCart));
+        try {
+          const parsedItems = JSON.parse(storedCart);
+          if (Array.isArray(parsedItems)) { // Basic validation
+            setItems(parsedItems);
+          } else {
+            console.error("Invalid cart data in localStorage:", parsedItems);
+            localStorage.removeItem(CART_STORAGE_KEY);
+          }
+        } catch (error) {
+          console.error("Failed to parse cart from localStorage:", error);
+          localStorage.removeItem(CART_STORAGE_KEY); // Clear corrupted data
+        }
       }
     }
   }, []);
@@ -42,12 +54,12 @@ export function useCart() {
   }, [toast]);
 
   const removeItem = useCallback((itemId: string) => {
+    const removedItem = items.find(i => i.id === itemId); // Find before filtering for toast
     setItems((prevItems) => prevItems.filter((i) => i.id !== itemId));
-    const removedItem = items.find(i => i.id === itemId);
     if (removedItem) {
       toast({ title: `${removedItem.name} removed from cart`, variant: "destructive" });
     }
-  }, [items, toast]);
+  }, [items, toast]); // items dependency for removedItem name
 
   const updateQuantity = useCallback((itemId: string, newQuantity: number) => {
     if (newQuantity <= 0) {
@@ -72,12 +84,12 @@ export function useCart() {
     return items.reduce((total, item) => total + item.price * item.quantity, 0);
   }, [items]);
 
-  const toggleCart = useCallback(() => {
+  const toggleCart = useCallback(() => { // May not be used if Sheet is the only interface
     setIsCartOpen(prev => !prev);
   }, []);
 
-  const openCart = useCallback(() => setIsCartOpen(true), []);
-  const closeCart = useCallback(() => setIsCartOpen(false), []);
+  const openCart = useCallback(() => setIsCartOpen(true), []); // May not be used
+  const closeCart = useCallback(() => setIsCartOpen(false), []); // May not be used
 
   return {
     items,
@@ -87,9 +99,10 @@ export function useCart() {
     clearCart,
     getTotalItems,
     getTotalPrice,
-    isCartOpen,
-    toggleCart,
-    openCart,
-    closeCart,
+    isCartOpen, // Potentially unused
+    toggleCart, // Potentially unused
+    openCart,   // Potentially unused
+    closeCart,  // Potentially unused
   };
 }
+

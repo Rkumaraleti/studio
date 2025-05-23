@@ -4,23 +4,19 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import type { MenuItem, MenuCategory, MerchantProfile } from "@/lib/types"; // CartItem type is implicitly used by useCart
+import type { MenuItem, MenuCategory, MerchantProfile } from "@/lib/types";
 import { MenuDisplayItem } from "./components/menu-display-item";
 import { useParams } from "next/navigation";
 import { UtensilsCrossed, Info, ShoppingBag, AlertTriangle, Loader2, Trash2, PlusCircle, MinusCircle, CreditCard, ShoppingCart, ChevronUp } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"; // Keep Card for other uses if any, but not for main order display
 import {
   Sheet,
   SheetContent,
-  SheetDescription,
   SheetHeader,
   SheetTitle,
   SheetTrigger,
   SheetFooter,
-  SheetClose,
 } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useCart } from "@/hooks/use-cart";
@@ -67,7 +63,7 @@ export default function MerchantMenuPage() {
   } = useCart();
   const { toast } = useToast();
 
-  const totalCartItems = getTotalItems();
+  const totalCartItems = getTotalItems(); // Sum of quantities of all item types
   const totalCartPrice = getTotalPrice();
 
   useEffect(() => {
@@ -86,7 +82,6 @@ export default function MerchantMenuPage() {
 
       try {
         const merchantsCollectionRef = collection(db, "merchants");
-        // Query for merchant by publicMerchantId
         const merchantQuery = query(merchantsCollectionRef, where("publicMerchantId", "==", publicIdFromUrl), limit(1));
         const merchantQuerySnapshot = await getDocs(merchantQuery);
 
@@ -99,11 +94,10 @@ export default function MerchantMenuPage() {
           return;
         }
 
-        // Fetch menu items using publicMerchantId
         const menuItemsCollectionRef = collection(db, "menuItems");
         const itemsQuery = query(
           menuItemsCollectionRef, 
-          where("merchantId", "==", publicIdFromUrl), // merchantId on menuItem is the publicMerchantId
+          where("merchantId", "==", publicIdFromUrl),
           orderBy("createdAt", "desc")
         );
         const itemsQuerySnapshot = await getDocs(itemsQuery);
@@ -127,7 +121,7 @@ export default function MerchantMenuPage() {
   }, [publicIdFromUrl]);
 
   const handleProceedToCheckout = () => {
-    if (cartItems.length === 0) {
+    if (cartItems.length === 0) { // or totalCartItems === 0
       toast({
         title: "Cart is Empty",
         description: "Please add items to your cart before proceeding to checkout.",
@@ -193,8 +187,6 @@ export default function MerchantMenuPage() {
         </p>
       </div>
 
-      {/* The in-page "Your Order" Card is REMOVED. Details are now in the Sheet. */}
-
       {!isLoading && menuItems.length === 0 && !error && (
         <Alert variant="default" className="max-w-md mx-auto">
           <ShoppingBag className="h-5 w-5" />
@@ -228,8 +220,8 @@ export default function MerchantMenuPage() {
         </section>
       ))}
 
-      {/* Sticky Bottom Bar with Sheet Trigger and Payment Button */}
-      {totalCartItems > 0 && (
+      {/* Sticky Bottom Bar: Shows if there is at least one type of item in cart */}
+      {cartItems.length > 0 && (
         <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border shadow-lg p-4 z-50">
           <div className="container mx-auto flex items-center justify-between gap-4">
             <Sheet>
@@ -237,7 +229,7 @@ export default function MerchantMenuPage() {
                 <div className="flex-grow cursor-pointer flex items-center group">
                   <div>
                     <p className="text-lg font-semibold group-hover:text-primary transition-colors">
-                      {totalCartItems} item{totalCartItems > 1 ? 's' : ''} in cart
+                      {totalCartItems} item{totalCartItems !== 1 ? 's' : ''} in cart
                     </p>
                     <p className="text-sm text-muted-foreground group-hover:text-primary transition-colors">
                       Total: <span className="font-bold text-primary">${totalCartPrice.toFixed(2)}</span>
@@ -254,12 +246,12 @@ export default function MerchantMenuPage() {
                 </SheetHeader>
                 <ScrollArea className="flex-grow">
                   <div className="p-4 space-y-4">
-                    {cartItems.map((item) => (
-                      <div key={item.id} className="flex items-start gap-4 p-3 border rounded-lg bg-card hover:shadow-md transition-shadow">
-                        {item.imageUrl ? (
+                    {cartItems.map((cartItemEntry) => ( // Renamed to avoid conflict with outer `item`
+                      <div key={cartItemEntry.id} className="flex items-start gap-4 p-3 border rounded-lg bg-card hover:shadow-md transition-shadow">
+                        {cartItemEntry.imageUrl ? (
                           <Image
-                            src={item.imageUrl}
-                            alt={item.name}
+                            src={cartItemEntry.imageUrl}
+                            alt={cartItemEntry.name}
                             width={60}
                             height={60}
                             className="rounded-md object-cover aspect-square"
@@ -271,24 +263,24 @@ export default function MerchantMenuPage() {
                           </div>
                         )}
                         <div className="flex-1">
-                          <h4 className="font-semibold">{item.name}</h4>
-                          <p className="text-sm text-muted-foreground">${item.price.toFixed(2)} each</p>
+                          <h4 className="font-semibold">{cartItemEntry.name}</h4>
+                          <p className="text-sm text-muted-foreground">${cartItemEntry.price.toFixed(2)} each</p>
                           <div className="flex items-center gap-2 mt-2">
                             <Button
                               variant="outline"
                               size="icon"
                               className="h-7 w-7"
-                              onClick={() => item.quantity > 1 ? updateQuantity(item.id, item.quantity - 1) : removeItem(item.id)}
+                              onClick={() => cartItemEntry.quantity > 1 ? updateQuantity(cartItemEntry.id, cartItemEntry.quantity - 1) : removeItem(cartItemEntry.id)}
                               aria-label="Decrease quantity"
                             >
                               <MinusCircle className="h-4 w-4" />
                             </Button>
-                            <span className="w-6 text-center font-medium">{item.quantity}</span>
+                            <span className="w-6 text-center font-medium">{cartItemEntry.quantity}</span>
                             <Button
                               variant="outline"
                               size="icon"
                               className="h-7 w-7"
-                              onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                              onClick={() => updateQuantity(cartItemEntry.id, cartItemEntry.quantity + 1)}
                               aria-label="Increase quantity"
                             >
                               <PlusCircle className="h-4 w-4" />
@@ -296,12 +288,12 @@ export default function MerchantMenuPage() {
                           </div>
                         </div>
                         <div className="text-right">
-                            <p className="font-semibold">${(item.price * item.quantity).toFixed(2)}</p>
+                            <p className="font-semibold">${(cartItemEntry.price * cartItemEntry.quantity).toFixed(2)}</p>
                             <Button
                               variant="ghost"
                               size="icon"
                               className="text-muted-foreground hover:text-destructive h-7 w-7 mt-1"
-                              onClick={() => removeItem(item.id)}
+                              onClick={() => removeItem(cartItemEntry.id)}
                               aria-label="Remove item"
                             >
                               <Trash2 className="h-4 w-4" />
@@ -314,9 +306,9 @@ export default function MerchantMenuPage() {
                      )}
                   </div>
                 </ScrollArea>
-                {cartItems.length > 0 && (
+                {cartItems.length > 0 && ( // Show clear cart button only if there are items
                   <SheetFooter className="p-4 border-t bg-background">
-                    <Button variant="outline" onClick={() => { clearCart(); }} className="w-full"> {/* SheetClose can be added here if desired */}
+                    <Button variant="outline" onClick={clearCart} className="w-full">
                       Clear Cart
                     </Button>
                   </SheetFooter>
@@ -327,8 +319,8 @@ export default function MerchantMenuPage() {
             <Button 
               onClick={handleProceedToCheckout} 
               size="lg"
-              className="bg-accent hover:bg-accent/90 text-accent-foreground min-w-[180px]" // Added min-width
-              disabled={cartItems.length === 0}
+              className="bg-accent hover:bg-accent/90 text-accent-foreground min-w-[180px]"
+              disabled={totalCartItems === 0} // Disable if total quantity is 0
             >
               <CreditCard className="mr-2 h-5 w-5" />
               Pay ${totalCartPrice.toFixed(2)}
