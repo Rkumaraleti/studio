@@ -137,6 +137,7 @@ export default function OrdersPage() {
       ) : (
         <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
           {orders.map(order => {
+            console.log('Order being rendered:', order.id, 'Status:', order.status); // Diagnostic log
             const statusInfo = orderStatusMap[order.status] || { label: order.status, icon: Info, color: "bg-gray-500", textColor: "text-gray-50" };
             const StatusIcon = statusInfo.icon;
 
