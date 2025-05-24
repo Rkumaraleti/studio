@@ -1,3 +1,4 @@
+
 {
   "hosting": {
     "site": "qrplus",
@@ -17,11 +18,16 @@
         "function": "nextServer"
       },
       {
+        "source": "/menu/**",
+        "function": "nextServer"
+      },
+      {
         "source": "**",
         "function": "nextServer"
       }
     ],
-    "cleanUrls": true
+    "cleanUrls": true,
+    "trailingSlash": false
   },
   "functions": [
     {
