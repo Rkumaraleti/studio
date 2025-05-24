@@ -1,3 +1,4 @@
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -17,13 +18,17 @@ import { Textarea } from "@/components/ui/textarea";
 import type { MenuItem } from "@/lib/types";
 import { AiDescriptionGenerator } from "./ai-description-generator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlusCircle, Save } from "lucide-react";
+import { PlusCircle, Save, ChevronsUpDown, Check } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { useState, useEffect } from "react";
+import { cn } from "@/lib/utils";
 
 const menuItemSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   description: z.string().min(10, "Description must be at least 10 characters"),
   price: z.coerce.number().positive("Price must be a positive number"),
-  category: z.string().min(1, "Category is required"),
+  category: z.string().min(1, "Category is required").trim(),
   imageUrl: z.string().url("Must be a valid URL").optional().or(z.literal('')),
 });
 
@@ -33,9 +38,10 @@ interface MenuItemFormProps {
   onSubmit: (data: MenuItemFormData) => void;
   initialData?: Partial<MenuItem>;
   isEditing?: boolean;
+  existingCategories?: string[];
 }
 
-export function MenuItemForm({ onSubmit, initialData, isEditing = false }: MenuItemFormProps) {
+export function MenuItemForm({ onSubmit, initialData, isEditing = false, existingCategories = [] }: MenuItemFormProps) {
   const form = useForm<MenuItemFormData>({
     resolver: zodResolver(menuItemSchema),
     defaultValues: {
@@ -47,14 +53,28 @@ export function MenuItemForm({ onSubmit, initialData, isEditing = false }: MenuI
     },
   });
 
+  const [popoverOpen, setPopoverOpen] = useState(false);
+  const [categorySearch, setCategorySearch] = useState("");
+
+  // Reset category search when initial data changes or form is reset
+  useEffect(() => {
+    setCategorySearch(initialData?.category || "");
+  }, [initialData?.category]);
+
+
   const currentItemName = form.watch("name");
 
   function handleFormSubmit(data: MenuItemFormData) {
     onSubmit(data);
     if (!isEditing) {
       form.reset(); // Reset form only if adding new item
+      setCategorySearch(""); // Reset search with form
     }
   }
+
+  const filteredCategories = existingCategories.filter(cat =>
+    cat.toLowerCase().includes(categorySearch.toLowerCase())
+  );
 
   return (
     <Card className="shadow-lg">
@@ -119,11 +139,81 @@ export function MenuItemForm({ onSubmit, initialData, isEditing = false }: MenuI
                 control={form.control}
                 name="category"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="flex flex-col">
                     <FormLabel>Category</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., Burgers, Sides, Drinks" {...field} />
-                    </FormControl>
+                    <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={popoverOpen}
+                            className={cn(
+                              "w-full justify-between",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value
+                              ? existingCategories.find(
+                                  (cat) => cat.toLowerCase() === field.value.toLowerCase()
+                                ) || field.value
+                              : "Select or create category..."}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                        <Command>
+                          <CommandInput
+                            placeholder="Search category or type new..."
+                            value={categorySearch}
+                            onValueChange={setCategorySearch}
+                          />
+                          <CommandList>
+                            <CommandEmpty>
+                              {categorySearch.trim() === "" ? "Type to search or create." : `No category found for "${categorySearch}".`}
+                            </CommandEmpty>
+                            <CommandGroup>
+                              {filteredCategories.map((cat) => (
+                                <CommandItem
+                                  value={cat}
+                                  key={cat}
+                                  onSelect={() => {
+                                    form.setValue("category", cat);
+                                    setCategorySearch(cat); // Update search to reflect selection
+                                    setPopoverOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      cat.toLowerCase() === field.value?.toLowerCase()
+                                        ? "opacity-100"
+                                        : "opacity-0"
+                                    )}
+                                  />
+                                  {cat}
+                                </CommandItem>
+                              ))}
+                              {categorySearch.trim() !== "" &&
+                               !existingCategories.some(c => c.toLowerCase() === categorySearch.trim().toLowerCase()) && (
+                                <CommandItem
+                                  value={categorySearch.trim()}
+                                  onSelect={() => {
+                                    form.setValue("category", categorySearch.trim());
+                                    // setCategorySearch(categorySearch.trim()); // Keep search as is or clear
+                                    setPopoverOpen(false);
+                                  }}
+                                  className="text-primary italic"
+                                >
+                                  Create new: "{categorySearch.trim()}"
+                                </CommandItem>
+                              )}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -136,7 +226,7 @@ export function MenuItemForm({ onSubmit, initialData, isEditing = false }: MenuI
                 <FormItem>
                   <FormLabel>Image URL (Optional)</FormLabel>
                   <FormControl>
-                    <Input placeholder="https://example.com/image.png" {...field} />
+                    <Input placeholder="https://placehold.co/600x400.png" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

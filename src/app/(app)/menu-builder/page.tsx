@@ -2,7 +2,7 @@
 // src/app/(app)/menu-builder/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import type { MenuItem } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { MenuItemForm } from "./components/menu-item-form";
@@ -85,6 +85,14 @@ export default function MenuBuilderPage() {
       unsubscribe();
     };
   }, [user, authLoading, publicMerchantId, isLoadingMerchantProfile, toast]);
+
+  const uniqueCategories = useMemo(() => {
+    const categories = menuItems
+      .map(item => item.category)
+      .filter((category): category is string => typeof category === 'string' && category.trim() !== '')
+      .map(category => category.trim());
+    return Array.from(new Set(categories)).sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+  }, [menuItems]);
 
   const handleAddItem = async (data: Omit<MenuItem, 'id' | 'merchantId' | 'createdAt' | 'updatedAt'>) => {
     if (!user || !publicMerchantId) {
@@ -208,6 +216,7 @@ export default function MenuBuilderPage() {
         initialData={editingItem}
         isEditing={!!editingItem}
         key={editingItem ? editingItem.id : 'add-new-item-form'}
+        existingCategories={uniqueCategories}
       />
       {editingItem && (
         <Button variant="outline" onClick={() => setEditingItem(undefined)} className="mb-6">
