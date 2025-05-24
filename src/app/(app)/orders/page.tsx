@@ -201,11 +201,7 @@ export default function OrdersPage() {
                       </Button>
                     </div>
                   )}
-                  {order.status !== 'pending' && (
-                     <Badge variant="outline" className="text-sm font-medium py-1.5 px-3 border-dashed self-end">
-                         Status: {statusInfo.label}
-                       </Badge>
-                  )}
+                  {/* Removed status badge from here as it's in the header */}
                 </CardFooter>
               </Card>
             );
