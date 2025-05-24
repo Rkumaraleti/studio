@@ -7,9 +7,9 @@ import type { Order, OrderStatus } from "@/lib/types";
 import { useAuth } from "@/contexts/auth-context";
 import { useMerchantProfile } from "@/hooks/use-merchant-profile";
 import { db } from "@/lib/firebase/config";
-import { collection, query, where, onSnapshot, orderBy, doc, updateDoc } from "firebase/firestore";
+import { collection, query, where, onSnapshot, orderBy, doc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, ShoppingBag, Info, RefreshCw, PackageCheck, Utensils, Bike, Ban } from "lucide-react";
+import { Loader2, ShoppingBag, Info, Hourglass, CheckCircle2, XCircle, RefreshCw } from "lucide-react"; // Added relevant icons
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -21,14 +21,10 @@ import {
 } from "@/components/ui/select";
 import { formatDistanceToNow } from 'date-fns';
 
-const orderStatusMap: Record<OrderStatus, { label: string; icon: React.ElementType; color: string }> = {
-  pending: { label: "Pending", icon: RefreshCw, color: "bg-yellow-500" },
-  paid: { label: "Paid", icon: PackageCheck, color: "bg-blue-500" },
-  confirmed: { label: "Confirmed", icon: PackageCheck, color: "bg-green-500" },
-  preparing: { label: "Preparing", icon: Utensils, color: "bg-orange-500" },
-  ready: { label: "Ready", icon: Bike, color: "bg-purple-500" },
-  delivered: { label: "Delivered", icon: PackageCheck, color: "bg-gray-700" },
-  cancelled: { label: "Cancelled", icon: Ban, color: "bg-red-500" },
+const orderStatusMap: Record<OrderStatus, { label: string; icon: React.ElementType; color: string; textColor?: string }> = {
+  pending: { label: "Pending", icon: Hourglass, color: "bg-yellow-500", textColor: "text-yellow-50" },
+  confirmed: { label: "Confirmed", icon: CheckCircle2, color: "bg-green-600", textColor: "text-green-50" },
+  cancelled: { label: "Cancelled", icon: XCircle, color: "bg-red-600", textColor: "text-red-50" },
 };
 
 export default function OrdersPage() {
@@ -78,7 +74,7 @@ export default function OrdersPage() {
   const handleStatusChange = async (orderId: string, newStatus: OrderStatus) => {
     try {
       const orderDocRef = doc(db, "orders", orderId);
-      await updateDoc(orderDocRef, { status: newStatus, updatedAt: new Date() });
+      await updateDoc(orderDocRef, { status: newStatus, updatedAt: serverTimestamp() });
       toast({ title: "Order Status Updated", description: `Order ${orderId.substring(0,8)}... is now ${newStatus}.` });
     } catch (error) {
       console.error("Error updating order status:", error);
@@ -96,11 +92,11 @@ export default function OrdersPage() {
       console.warn("Error formatting date:", error, "Timestamp:", timestamp);
       return 'a while ago';
     }
-  }; // Explicit semicolon
+  };
 
   if (authLoading || isLoadingProfile || (isLoadingOrders && user && publicMerchantId)) {
     return (
-      <div className="flex justify-center items-center h-64 p-4 md:p-6 lg:p-8"> {/* Added padding here */}
+      <div className="flex justify-center items-center h-64 p-4 md:p-6 lg:p-8">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
         <p className="ml-4 text-lg">Loading orders...</p>
       </div>
@@ -113,7 +109,7 @@ export default function OrdersPage() {
 
   if (user && !publicMerchantId && !isLoadingProfile) {
     return (
-      <div className="flex justify-center items-center h-64 p-4 md:p-6 lg:p-8"> {/* Added padding here */}
+      <div className="flex justify-center items-center h-64 p-4 md:p-6 lg:p-8">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
         <p className="ml-3 text-md">Waiting for merchant profile to initialize...</p>
       </div>
@@ -121,13 +117,13 @@ export default function OrdersPage() {
   }
 
   return (
-    <div className="space-y-8 p-4 md:p-6 lg:p-8"> {/* Added padding here */}
+    <div className="space-y-8 p-4 md:p-6 lg:p-8">
       <div>
         <h1 className="text-3xl font-bold tracking-tight text-primary mb-2 flex items-center">
           <ShoppingBag className="mr-3 h-8 w-8" /> Orders Management
         </h1>
         <p className="text-muted-foreground">
-          View and manage incoming orders from your customers.
+          View and manage incoming orders from your customers. New orders appear in real-time.
         </p>
       </div>
 
@@ -147,7 +143,7 @@ export default function OrdersPage() {
       ) : (
         <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
           {orders.map(order => {
-            const statusInfo = orderStatusMap[order.status] || { label: order.status, icon: Info, color: "bg-gray-500" };
+            const statusInfo = orderStatusMap[order.status] || { label: order.status, icon: Info, color: "bg-gray-500", textColor: "text-gray-50" };
             const StatusIcon = statusInfo.icon;
 
             return (
@@ -155,8 +151,8 @@ export default function OrdersPage() {
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-xl">Order #{order.displayOrderId || order.id.substring(0, 8)}</CardTitle>
-                    <Badge className={`${statusInfo.color} text-white`}>
-                      <StatusIcon className="h-4 w-4 mr-1" />
+                    <Badge className={`${statusInfo.color} ${statusInfo.textColor || 'text-white'} font-medium`}>
+                      <StatusIcon className="h-4 w-4 mr-1.5" />
                       {statusInfo.label}
                     </Badge>
                   </div>
@@ -190,29 +186,40 @@ export default function OrdersPage() {
                 </CardContent>
                 <CardFooter className="flex flex-col space-y-3 md:flex-row md:justify-between md:items-center md:space-y-0 border-t pt-4 mt-auto">
                   <div className="flex items-center text-xs text-muted-foreground">
-                    <Info className="h-3 w-3 mr-1" /> Updated {getRelativeTime(order.updatedAt || order.createdAt)}
+                    <RefreshCw className="h-3 w-3 mr-1" /> Updated {getRelativeTime(order.updatedAt || order.createdAt)}
                   </div>
                    <div className="w-full md:w-auto">
-                    <Select onValueChange={(value) => handleStatusChange(order.id, value as OrderStatus)} value={order.status}>
-                      <SelectTrigger className="w-full md:w-[180px] h-9 text-sm">
-                        <SelectValue placeholder="Update Status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.keys(orderStatusMap).map(statusKey => {
-                          const currentStatus = statusKey as OrderStatus;
-                          const currentStatusInfo = orderStatusMap[currentStatus];
-                          const CurrentStatusIcon = currentStatusInfo.icon;
-                          return (
-                            <SelectItem key={currentStatus} value={currentStatus} className="text-sm">
-                              <div className="flex items-center">
-                                <CurrentStatusIcon className={`h-4 w-4 mr-2 ${currentStatusInfo.color.replace('bg-', 'text-')}`} />
-                                {currentStatusInfo.label}
-                              </div>
-                            </SelectItem>
-                          );
-                        })}
-                      </SelectContent>
-                    </Select>
+                    {order.status === 'pending' ? (
+                      <Select onValueChange={(value) => handleStatusChange(order.id, value as OrderStatus)} defaultValue={order.status}>
+                        <SelectTrigger className="w-full md:w-[180px] h-9 text-sm">
+                          <SelectValue placeholder="Update Status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="pending" className="text-sm">
+                            <div className="flex items-center">
+                              <Hourglass className={`h-4 w-4 mr-2 ${orderStatusMap.pending.color.replace('bg-', 'text-')}`} />
+                              {orderStatusMap.pending.label}
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="confirmed" className="text-sm">
+                            <div className="flex items-center">
+                              <CheckCircle2 className={`h-4 w-4 mr-2 ${orderStatusMap.confirmed.color.replace('bg-', 'text-')}`} />
+                              {orderStatusMap.confirmed.label}
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="cancelled" className="text-sm">
+                            <div className="flex items-center">
+                              <XCircle className={`h-4 w-4 mr-2 ${orderStatusMap.cancelled.color.replace('bg-', 'text-')}`} />
+                              {orderStatusMap.cancelled.label}
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                       <Badge variant="outline" className="text-sm font-medium py-1.5 px-3 border-dashed">
+                         Status: {statusInfo.label}
+                       </Badge>
+                    )}
                   </div>
                 </CardFooter>
               </Card>

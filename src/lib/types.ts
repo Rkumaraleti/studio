@@ -35,7 +35,8 @@ export interface MerchantProfile {
   updatedAt?: any; // Firestore Timestamp
 }
 
-export type OrderStatus = 'pending' | 'paid' | 'confirmed' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
+// Updated OrderStatus type
+export type OrderStatus = 'pending' | 'confirmed' | 'cancelled';
 
 export interface Order {
   id: string; // Firestore document ID (auto-generated)
@@ -47,4 +48,6 @@ export interface Order {
   status: OrderStatus;
   createdAt: any; // Firestore serverTimestamp
   updatedAt: any; // Firestore serverTimestamp
+  customerName?: string; // Optional: if user provides a name
+  notes?: string; // Optional: special instructions from customer
 }

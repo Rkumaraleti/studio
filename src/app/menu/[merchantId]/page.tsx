@@ -7,7 +7,7 @@ import Image from "next/image";
 import type { MenuItem, MenuCategory, MerchantProfile, Order } from "@/lib/types";
 import { MenuDisplayItem } from "./components/menu-display-item";
 import { useParams } from "next/navigation";
-import { UtensilsCrossed, Info, ShoppingBag, AlertTriangle, Loader2, Trash2, PlusCircle, MinusCircle, CreditCard, ShoppingCart, ChevronUp } from "lucide-react";
+import { UtensilsCrossed, Info, ShoppingBag, AlertTriangle, Loader2, Trash2, PlusCircle, MinusCircle, CreditCard, ShoppingCart, ChevronUp, Hourglass } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,10 +19,19 @@ import {
   SheetFooter,
   SheetClose,
 } from "@/components/ui/sheet";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { useCart } from "@/hooks/use-cart";
 import { useToast } from "@/hooks/use-toast";
-import { db, auth } from "@/lib/firebase/config"; // Import auth
+import { db, auth } from "@/lib/firebase/config";
 import { collection, query, where, getDocs, orderBy, limit, addDoc, serverTimestamp } from "firebase/firestore";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -30,7 +39,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 const groupByCategory = (items: MenuItem[]): MenuCategory[] => {
   const categories: { [key: string]: MenuItem[] } = {};
   items.forEach(item => {
-    const categoryKey = item.category || 'Uncategorized';
+    const categoryKey = item.category?.trim() || 'Uncategorized';
     if (!categories[categoryKey]) {
       categories[categoryKey] = [];
     }
@@ -61,6 +70,8 @@ export default function MerchantMenuPage() {
   const [isLoadingPage, setIsLoadingPage] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
+  const [showOrderConfirmation, setShowOrderConfirmation] = useState(false);
+  const [confirmedOrderId, setConfirmedOrderId] = useState<string | null>(null);
 
   const { 
     items: cartItems, 
@@ -165,11 +176,11 @@ export default function MerchantMenuPage() {
     const displayOrderId = generateDisplayOrderId();
     const orderData: Omit<Order, 'id' | 'createdAt' | 'updatedAt'> = {
       displayOrderId,
-      customerUid: auth.currentUser.uid,
+      customerUid: auth.currentUser.uid, // UID of the (potentially anonymous) user
       merchantPublicId: publicIdFromUrl,
       items: cartItems,
       totalAmount: totalCartPrice,
-      status: 'paid', // Initial status, assuming payment gateway handles this
+      status: 'pending', // Initial status is now 'pending'
     };
 
     try {
@@ -180,17 +191,9 @@ export default function MerchantMenuPage() {
         updatedAt: serverTimestamp(),
       });
 
-      toast({
-        title: "Order Placed Successfully!",
-        description: `Your Order ID is: ${displayOrderId}. Thank you!`,
-        duration: 10000, // Longer duration to see ID
-      });
+      setConfirmedOrderId(displayOrderId);
+      setShowOrderConfirmation(true);
       clearCart();
-      // Attempt to close the window/tab
-      // Note: This might not work in all browsers or if the tab wasn't opened by script.
-      setTimeout(() => {
-        window.close();
-      }, 2000); // Short delay to allow toast to be seen
 
     } catch (error: any) {
       console.error("Error placing order:", error);
@@ -413,7 +416,7 @@ export default function MerchantMenuPage() {
           <Button 
             onClick={handleProceedToCheckout} 
             size="lg"
-            className="bg-accent hover:bg-accent/90 text-accent-foreground min-w-[140px]"
+            className="bg-accent hover:bg-accent/90 text-accent-foreground min-w-[120px]" // Reduced min-width
             disabled={totalCartItems === 0 || isLoadingCart || isSubmittingOrder}
           >
             {isSubmittingOrder ? (
@@ -428,7 +431,7 @@ export default function MerchantMenuPage() {
       
        <footer className="py-6 md:px-6 md:py-0 border-t mt-12">
           <div className="container mx-auto flex flex-col items-center justify-between gap-4 md:h-20 md:flex-row">
-            <div className="text-balance text-center text-sm leading-loose text-muted-foreground md:text-left">
+            <div className="text-sm text-muted-foreground md:text-left">
               Powered by QR Plus
             </div>
             <p className="text-sm text-muted-foreground">
@@ -436,6 +439,26 @@ export default function MerchantMenuPage() {
             </p>
           </div>
         </footer>
+
+        <AlertDialog open={showOrderConfirmation} onOpenChange={setShowOrderConfirmation}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center text-2xl">
+                <CheckCircle2 className="h-7 w-7 mr-2 text-green-600" /> Order Placed Successfully!
+              </AlertDialogTitle>
+              <AlertDialogDescription className="text-base pt-2">
+                Your Order ID is: <strong className="text-foreground">{confirmedOrderId}</strong>
+                <br />
+                Please make a note of this ID. Thank you for your order!
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogAction onClick={() => setShowOrderConfirmation(false)} className="w-full">
+                Done
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
     </div>
   );
 }
