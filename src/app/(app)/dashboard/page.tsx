@@ -4,7 +4,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { ClipboardList, QrCode, UserCircle, DollarSign, ListChecks, Loader2, LineChart as LineChartIcon } from "lucide-react"; // Renamed LineChart to LineChartIcon
+import { ClipboardList, QrCode, UserCircle, DollarSign, ListChecks, Loader2, LineChart as LineChartIcon } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useMerchantProfile } from "@/hooks/use-merchant-profile";
 import { db } from "@/lib/firebase/config";
@@ -26,7 +26,7 @@ interface DailyOrderData {
 
 export default function DashboardPage() {
   const { user, loading: authLoading } = useAuth();
-  const { publicMerchantId, isLoadingProfile } = useMerchantProfile();
+  const { profile, publicMerchantId, isLoadingProfile } = useMerchantProfile(); // Get full profile
   const [stats, setStats] = useState<DashboardStats>({
     todaysOrders: null,
     totalMenuItems: null,
@@ -109,7 +109,7 @@ export default function DashboardPage() {
             where("merchantPublicId", "==", publicMerchantId),
             where("createdAt", ">=", sevenDaysAgoTimestamp),
             where("createdAt", "<=", endOfTodayForChart),
-            orderBy("createdAt", "desc") // Changed to "desc" to match existing index
+            orderBy("createdAt", "desc") 
         );
         const querySnapshot = await getDocs(last7DaysOrdersQuery);
         console.log("[Dashboard] Chart querySnapshot size:", querySnapshot.size);
@@ -190,12 +190,18 @@ export default function DashboardPage() {
     last7DaysOrdersData: last7DaysOrdersData ? JSON.parse(JSON.stringify(last7DaysOrdersData)) : null
   });
 
+  const restaurantName = profile?.restaurantName || "Merchant";
+
   return (
     <div className="space-y-8 p-4 md:p-6 lg:p-8">
       <Card className="shadow-lg bg-card border-border">
         <CardHeader className="bg-gradient-to-r from-primary to-[hsl(var(--primary-hsl),0.8)] text-primary-foreground rounded-t-lg p-6">
-          <CardTitle className="text-3xl">Welcome Back, Merchant!</CardTitle>
-          <CardDescription className="text-primary-foreground/80">Here's what's happening with your QR Plus menu today.</CardDescription>
+          <CardTitle className="text-3xl">
+            {isLoadingProfile ? <Loader2 className="inline-block h-8 w-8 animate-spin" /> : `Welcome Back, ${restaurantName}!`}
+          </CardTitle>
+          <CardDescription className="text-primary-foreground/80">
+            Here's what's happening with your QR Plus menu today.
+          </CardDescription>
         </CardHeader>
       </Card>
 
