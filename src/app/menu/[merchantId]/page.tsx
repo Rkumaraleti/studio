@@ -7,7 +7,7 @@ import Image from "next/image";
 import type { MenuItem, MenuCategory, MerchantProfile, Order } from "@/lib/types";
 import { MenuDisplayItem } from "./components/menu-display-item";
 import { useParams } from "next/navigation";
-import { UtensilsCrossed, Info, ShoppingBag, AlertTriangle, Loader2, Trash2, PlusCircle, MinusCircle, CreditCard, ShoppingCart, ChevronUp, Hourglass } from "lucide-react";
+import { UtensilsCrossed, Info, ShoppingBag, AlertTriangle, Loader2, Trash2, PlusCircle, MinusCircle, CreditCard, ShoppingCart, ChevronUp, CheckCircle2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,6 +34,8 @@ import { useToast } from "@/hooks/use-toast";
 import { db, auth } from "@/lib/firebase/config";
 import { collection, query, where, getDocs, orderBy, limit, addDoc, serverTimestamp } from "firebase/firestore";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AppLogo } from "@/components/common/app-logo";
+
 
 // Helper to group items by category
 const groupByCategory = (items: MenuItem[]): MenuCategory[] => {
@@ -180,7 +182,7 @@ export default function MerchantMenuPage() {
       merchantPublicId: publicIdFromUrl,
       items: cartItems,
       totalAmount: totalCartPrice,
-      status: 'pending', // Initial status is now 'pending'
+      status: 'pending', 
     };
 
     try {
@@ -245,12 +247,12 @@ export default function MerchantMenuPage() {
   return (
     <div className="space-y-6">
        {merchantProfile?.restaurantDescription && (
-        <p className="text-xs text-muted-foreground text-center -mt-2 mb-4 px-2">
+        <p className="text-xs text-muted-foreground text-center mb-4 px-2">
           {merchantProfile.restaurantDescription}
         </p>
        )}
        {!merchantProfile?.restaurantDescription && !isLoadingPage && menuCategories.length > 0 && (
-         <p className="text-xs text-muted-foreground text-center -mt-2 mb-4 px-2">
+         <p className="text-xs text-muted-foreground text-center mb-4 px-2">
           Welcome! Browse our menu and add your favorites to your order.
         </p>
        )}
@@ -291,9 +293,8 @@ export default function MerchantMenuPage() {
         </section>
       ))}
 
-      {/* Sticky Bottom Bar - Always visible */}
        <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border shadow-lg p-4 z-50">
-        <div className="container mx-auto flex items-center justify-between gap-4">
+        <div className="flex items-center justify-between gap-4">
           <Sheet>
             <SheetTrigger asChild>
               <div className="flex-grow cursor-pointer flex items-center group">
@@ -416,7 +417,7 @@ export default function MerchantMenuPage() {
           <Button 
             onClick={handleProceedToCheckout} 
             size="lg"
-            className="bg-accent hover:bg-accent/90 text-accent-foreground min-w-[120px]" // Reduced min-width
+            className="bg-accent hover:bg-accent/90 text-accent-foreground min-w-[120px]"
             disabled={totalCartItems === 0 || isLoadingCart || isSubmittingOrder}
           >
             {isSubmittingOrder ? (
@@ -430,9 +431,9 @@ export default function MerchantMenuPage() {
       </div>
       
        <footer className="py-6 md:px-6 md:py-0 border-t mt-12">
-          <div className="container mx-auto flex flex-col items-center justify-between gap-4 md:h-20 md:flex-row">
-            <div className="text-sm text-muted-foreground md:text-left">
-              Powered by QR Plus
+          <div className="mx-auto flex flex-col items-center justify-between gap-4 md:h-20 md:flex-row">
+            <div className="text-balance text-center text-sm leading-loose text-muted-foreground md:text-left">
+              Powered by <AppLogo showText={false} size={16} className="inline-block align-middle" /> QR Plus.
             </div>
             <p className="text-sm text-muted-foreground">
               &copy; {new Date().getFullYear()} {merchantProfile?.restaurantName || "Your Restaurant"}. All Rights Reserved.
@@ -462,3 +463,4 @@ export default function MerchantMenuPage() {
     </div>
   );
 }
+
