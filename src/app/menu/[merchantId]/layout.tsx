@@ -45,7 +45,6 @@ export default function PublicMenuLayout({
       setHeaderData(prev => ({ ...prev, loading: true, error: null }));
       try {
         const merchantsCollectionRef = collection(db, "merchants");
-        // Query by publicMerchantId
         const merchantQuery = query(merchantsCollectionRef, where("publicMerchantId", "==", resolvedParams.merchantId), limit(1));
         const merchantQuerySnapshot = await getDocs(merchantQuery);
 
@@ -70,7 +69,7 @@ export default function PublicMenuLayout({
       <>
         <Head>
           <link rel="manifest" href="/manifest.json" />
-          <meta name="theme-color" content="#2579D0" /> {/* Deep Ocean Blue */}
+          <meta name="theme-color" content="#4285F4" /> {/* Primary Blue */}
           <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
           <meta name="apple-mobile-web-app-capable" content="yes" />
           <meta name="apple-mobile-web-app-status-bar-style" content="black" /> 
