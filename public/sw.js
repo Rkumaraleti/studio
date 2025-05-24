@@ -1,72 +1,86 @@
-
 // public/sw.js
-const CACHE_NAME = 'qr-plus-cache-v1';
-// Add any assets here that you want to cache during the install phase
-const PRECACHE_ASSETS = [
-  '/manifest.json',
-  // Add paths to your PWA icons if you want them pre-cached
-  // '/icon-192x192.png',
-  // '/icon-512x512.png',
-  // '/apple-touch-icon.png',
-  // Add shell pages if desired, e.g., '/menu/' if you have a generic shell
+const CACHE_NAME = 'qr-plus-cache-v2'; // Increment cache version if you change cached assets
+
+// Add paths to critical assets for precaching if desired.
+// For a Next.js app, this is often handled by PWA plugins,
+// but for a manual setup, you'd list essential files.
+const urlsToCache = [
+  // Example:
+  // '/menu/', 
+  // '/offline.html', // If you have an offline fallback page
+  // '/styles/globals.css', // Example, actual paths depend on your build output
 ];
 
 self.addEventListener('install', (event) => {
-  console.log('QR Plus Service Worker: Installing...');
-  // event.waitUntil(
-  //   caches.open(CACHE_NAME).then((cache) => {
-  //     console.log('QR Plus Service Worker: Caching pre-cache assets');
-  //     return cache.addAll(PRECACHE_ASSETS);
-  //   })
-  // );
-  // Force the waiting service worker to become the active service worker.
-  self.skipWaiting();
+  console.log('[Service Worker] Installing...');
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => {
+      console.log('[Service Worker] Precaching initial assets');
+      // Only add urlsToCache if it's not empty
+      return urlsToCache.length > 0 ? cache.addAll(urlsToCache) : Promise.resolve();
+    }).then(() => {
+      return self.skipWaiting(); // Ensure new SW activates quickly
+    })
+  );
 });
 
 self.addEventListener('activate', (event) => {
-  console.log('QR Plus Service Worker: Activating...');
-  // Clean up old caches if necessary
-  // event.waitUntil(
-  //   caches.keys().then((cacheNames) => {
-  //     return Promise.all(
-  //       cacheNames.map((cacheName) => {
-  //         if (cacheName !== CACHE_NAME) {
-  //           console.log('QR Plus Service Worker: Deleting old cache', cacheName);
-  //           return caches.delete(cacheName);
-  //         }
-  //       })
-  //     );
-  //   })
-  // );
-  // Take control of all clients as soon as the SW activates.
-  return self.clients.claim();
+  console.log('[Service Worker] Activating...');
+  // Clean up old caches
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => {
+          if (cacheName !== CACHE_NAME) {
+            console.log('[Service Worker] Deleting old cache:', cacheName);
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    }).then(() => {
+      return self.clients.claim(); // Take control of clients immediately
+    })
+  );
 });
 
 self.addEventListener('fetch', (event) => {
-  // Log all fetch requests handled by the service worker
-  console.log(`QR Plus Service Worker: Fetching ${event.request.method} ${event.request.url}`);
+  // We only want to apply caching strategies to GET requests.
+  // Non-GET requests (POST, PUT, etc.) should always go to the network.
+  if (event.request.method !== 'GET') {
+    event.respondWith(fetch(event.request));
+    return;
+  }
 
-  // Basic pass-through fetch strategy (network first).
-  // For offline capabilities, you would implement more sophisticated caching strategies here.
-  // Example: Network falling back to cache, or cache first then network.
+  // Cache-First Strategy for GET requests
   event.respondWith(
-    fetch(event.request)
-      .then((response) => {
-        // You could cache successful GET requests here if desired
-        // if (response.ok && event.request.method === 'GET') {
-        //   const responseToCache = response.clone();
-        //   caches.open(CACHE_NAME).then((cache) => {
-        //     cache.put(event.request, responseToCache);
-        //   });
+    caches.match(event.request).then((cachedResponse) => {
+      if (cachedResponse) {
+        // console.log('[Service Worker] Returning from cache:', event.request.url);
+        return cachedResponse;
+      }
+
+      // console.log('[Service Worker] Fetching from network:', event.request.url);
+      return fetch(event.request).then((networkResponse) => {
+        // Optional: Cache the new response if it's a successful GET request
+        // Be careful about caching too aggressively, especially for dynamic content,
+        // unless you have a specific strategy for updating it.
+        if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+          const responseToCache = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            // console.log('[Service Worker] Caching new response:', event.request.url);
+            cache.put(event.request, responseToCache);
+          });
+        }
+        return networkResponse;
+      }).catch((error) => {
+        console.error('[Service Worker] Fetch failed for:', event.request.url, error);
+        // Optional: Return an offline fallback page for navigation requests
+        // if (event.request.mode === 'navigate' && urlsToCache.includes('/offline.html')) {
+        //   return caches.match('/offline.html');
         // }
-        return response;
-      })
-      .catch((error) => {
-        // If the network request fails, you might want to serve a fallback page or resource from cache
-        console.error('QR Plus Service Worker: Fetch error:', error);
-        // Example: return caches.match('/offline.html');
-        // For now, just re-throw the error to let the browser handle it (e.g., show offline page)
+        // For other types of requests, or if no offline page, re-throw to show browser default.
         throw error;
-      })
+      });
+    })
   );
 });
