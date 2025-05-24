@@ -56,7 +56,9 @@ const generateDisplayOrderId = () => {
 export default function MerchantMenuPage() {
   const params = useParams();
   const publicIdFromUrl = params.merchantId as string;
-  
+
+  console.log("[MerchantMenuPage] Component invoked. Raw params:", params, "Extracted publicIdFromUrl:", publicIdFromUrl); // Diagnostic Log
+
   const [merchantProfile, setMerchantProfile] = useState<MerchantProfile | null>(null);
   const [menuCategories, setMenuCategories] = useState<MenuCategory[]>([]);
   
@@ -78,7 +80,7 @@ export default function MerchantMenuPage() {
     clearCart,
     getTotalItems, 
     getTotalPrice,
-    isLoadingCart, // Used to disable pay button until cart (and anon user) is ready
+    isLoadingCart,
   } = useCart();
   const { toast } = useToast();
 
@@ -90,7 +92,7 @@ export default function MerchantMenuPage() {
     console.log("[MerchantMenuPage] useEffect for initial data. publicIdFromUrl:", publicIdFromUrl);
 
     if (!publicIdFromUrl || typeof publicIdFromUrl !== 'string' || publicIdFromUrl.trim() === "") {
-      console.error("[MerchantMenuPage] Public Menu ID is missing or invalid in URL.");
+      console.error("[MerchantMenuPage] Public Menu ID is missing or invalid in URL. Params:", params);
       setError("Public Menu ID is missing or invalid in URL.");
       setIsLoadingPage(false);
       return;
@@ -106,6 +108,7 @@ export default function MerchantMenuPage() {
       try {
         console.log("[MerchantMenuPage] Fetching merchant profile for publicId:", publicIdFromUrl);
         const merchantsCollectionRef = collection(db, "merchants");
+        // Query to find the merchant document where 'publicMerchantId' matches publicIdFromUrl
         const merchantQuery = query(merchantsCollectionRef, where("publicMerchantId", "==", publicIdFromUrl), limit(1));
         const merchantQuerySnapshot = await getDocs(merchantQuery);
 
@@ -125,7 +128,7 @@ export default function MerchantMenuPage() {
         const menuItemsCollectionRef = collection(db, "menuItems");
         const itemsQuery = query(
           menuItemsCollectionRef, 
-          where("merchantId", "==", publicIdFromUrl),
+          where("merchantId", "==", publicIdFromUrl), // merchantId in menuItems should be publicMerchantId
           orderBy("category"), 
           orderBy("name")
         );
@@ -151,7 +154,7 @@ export default function MerchantMenuPage() {
     };
 
     fetchData();
-  }, [publicIdFromUrl]);
+  }, [publicIdFromUrl, toast]); // Added toast to dependencies as it's used in effects
 
   // Real-time listener for active order status
   useEffect(() => {
@@ -171,8 +174,8 @@ export default function MerchantMenuPage() {
           toast({
             title: "Order Confirmed!",
             description: `Your order #${activeDisplayOrderId} has been confirmed by the restaurant.`,
-            variant: "default", // Success variant
-            duration: 7000, // Longer duration
+            variant: "default",
+            duration: 7000, 
           });
           setTimeout(() => {
             if (typeof window !== 'undefined') window.close();
@@ -191,7 +194,7 @@ export default function MerchantMenuPage() {
       } else {
         console.warn(`[MerchantMenuPage] Active order document ${activeOrderId} not found.`);
         setError("Your order details could not be retrieved. It might have been removed.");
-        setViewMode('menu'); // Revert to menu view if order doc is gone
+        setViewMode('menu'); 
         setActiveOrderId(null);
       }
     }, (error) => {
@@ -224,7 +227,7 @@ export default function MerchantMenuPage() {
       return;
     }
 
-    const currentUserForOrder = auth.currentUser; // Capture current user state at function start
+    const currentUserForOrder = auth.currentUser; 
 
     if (!currentUserForOrder) {
         toast({
@@ -258,7 +261,7 @@ export default function MerchantMenuPage() {
       setActiveOrderId(docRef.id); 
       setActiveDisplayOrderId(displayOrderId);
       setActiveOrderStatus('pending');
-      setViewMode('tracking'); // Switch to tracking view
+      setViewMode('tracking'); 
       clearCart();
       
       toast({
@@ -559,3 +562,4 @@ export default function MerchantMenuPage() {
   );
 }
 
+    
