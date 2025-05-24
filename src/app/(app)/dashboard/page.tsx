@@ -26,7 +26,7 @@ interface DailyOrderData {
 
 export default function DashboardPage() {
   const { user, loading: authLoading } = useAuth();
-  const { profile, publicMerchantId, isLoadingProfile } = useMerchantProfile(); // Get full profile
+  const { profile, publicMerchantId, isLoadingProfile } = useMerchantProfile();
   const [stats, setStats] = useState<DashboardStats>({
     todaysOrders: null,
     totalMenuItems: null,
