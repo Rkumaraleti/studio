@@ -24,6 +24,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useMerchantProfile } from "@/hooks/use-merchant-profile";
 import { useEffect } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { deleteField } from "firebase/firestore"; // Import deleteField
 
 const paymentFormSchema = z.object({
   restaurantName: z.string().min(2, "Restaurant name is required"),
@@ -65,12 +66,12 @@ export function PaymentForm() {
 
   async function onSubmit(data: PaymentFormData) {
     try {
-      const updateData = { ...data };
-      if (updateData.restaurantDescription === "") {
-        updateData.restaurantDescription = undefined; // Ensure empty string becomes undefined for Firestore
+      const updateData: Partial<PaymentFormData & { restaurantDescription?: any }> = { ...data };
+      if (data.restaurantDescription === "") {
+        updateData.restaurantDescription = deleteField(); // Use deleteField()
       }
       // Exclude staticMenuUrl from form submission if it's ever part of the form values directly
-      const { ...dataToSubmit } = updateData; 
+      const { ...dataToSubmit } = updateData;
       await updateProfile(dataToSubmit);
       toast({
         title: "Profile Updated",
