@@ -9,16 +9,10 @@ import { useMerchantProfile } from "@/hooks/use-merchant-profile";
 import { db } from "@/lib/firebase/config";
 import { collection, query, where, onSnapshot, orderBy, doc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, ShoppingBag, Info, Hourglass, CheckCircle2, XCircle, RefreshCw } from "lucide-react"; // Added relevant icons
+import { Loader2, ShoppingBag, Info, Hourglass, CheckCircle2, XCircle, RefreshCw, ThumbsUp, Ban } from "lucide-react"; // Added relevant icons
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 import { formatDistanceToNow } from 'date-fns';
 
 const orderStatusMap: Record<OrderStatus, { label: string; icon: React.ElementType; color: string; textColor?: string }> = {
@@ -184,43 +178,34 @@ export default function OrdersPage() {
                      </div>
                   )}
                 </CardContent>
-                <CardFooter className="flex flex-col space-y-3 md:flex-row md:justify-between md:items-center md:space-y-0 border-t pt-4 mt-auto">
-                  <div className="flex items-center text-xs text-muted-foreground">
+                <CardFooter className="flex flex-col items-stretch gap-3 md:flex-row md:justify-between md:items-center border-t pt-4 mt-auto">
+                  <div className="text-xs text-muted-foreground flex items-center">
                     <RefreshCw className="h-3 w-3 mr-1" /> Updated {getRelativeTime(order.updatedAt || order.createdAt)}
                   </div>
-                   <div className="w-full md:w-auto">
-                    {order.status === 'pending' ? (
-                      <Select onValueChange={(value) => handleStatusChange(order.id, value as OrderStatus)} defaultValue={order.status}>
-                        <SelectTrigger className="w-full md:w-[180px] h-9 text-sm">
-                          <SelectValue placeholder="Update Status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="pending" className="text-sm">
-                            <div className="flex items-center">
-                              <Hourglass className={`h-4 w-4 mr-2 ${orderStatusMap.pending.color.replace('bg-', 'text-')}`} />
-                              {orderStatusMap.pending.label}
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="confirmed" className="text-sm">
-                            <div className="flex items-center">
-                              <CheckCircle2 className={`h-4 w-4 mr-2 ${orderStatusMap.confirmed.color.replace('bg-', 'text-')}`} />
-                              {orderStatusMap.confirmed.label}
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="cancelled" className="text-sm">
-                            <div className="flex items-center">
-                              <XCircle className={`h-4 w-4 mr-2 ${orderStatusMap.cancelled.color.replace('bg-', 'text-')}`} />
-                              {orderStatusMap.cancelled.label}
-                            </div>
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                       <Badge variant="outline" className="text-sm font-medium py-1.5 px-3 border-dashed">
+                  {order.status === 'pending' && (
+                    <div className="flex gap-2 w-full md:w-auto">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex-1 md:flex-none border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
+                        onClick={() => handleStatusChange(order.id, 'cancelled')}
+                      >
+                        <Ban className="mr-2 h-4 w-4" /> Cancel Order
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        className="flex-1 md:flex-none bg-green-600 hover:bg-green-700 text-white"
+                        onClick={() => handleStatusChange(order.id, 'confirmed')}
+                      >
+                        <ThumbsUp className="mr-2 h-4 w-4" /> Complete Order
+                      </Button>
+                    </div>
+                  )}
+                  {order.status !== 'pending' && (
+                     <Badge variant="outline" className="text-sm font-medium py-1.5 px-3 border-dashed self-end">
                          Status: {statusInfo.label}
                        </Badge>
-                    )}
-                  </div>
+                  )}
                 </CardFooter>
               </Card>
             );
