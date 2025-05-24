@@ -199,7 +199,7 @@ export default function OrdersPage() {
                         className="bg-green-600 hover:bg-green-700 text-white"
                         onClick={() => handleStatusChange(order.id, 'confirmed')}
                       >
-                        <ThumbsUp className="mr-2 h-4 w-4" /> Complete
+                        <ThumbsUp className="mr-2 h-4 w-4" /> Completed
                       </Button>
                     </>
                   ) : (
