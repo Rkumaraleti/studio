@@ -9,7 +9,7 @@ import { useMerchantProfile } from "@/hooks/use-merchant-profile";
 import { db } from "@/lib/firebase/config";
 import { collection, query, where, onSnapshot, orderBy, doc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, ShoppingBag, Info, Hourglass, CheckCircle2, XCircle, RefreshCw, ThumbsUp, Ban } from "lucide-react"; // Added relevant icons
+import { Loader2, ShoppingBag, Info, Hourglass, CheckCircle2, XCircle, RefreshCw, ThumbsUp, Ban } from "lucide-react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -69,7 +69,7 @@ export default function OrdersPage() {
     try {
       const orderDocRef = doc(db, "orders", orderId);
       await updateDoc(orderDocRef, { status: newStatus, updatedAt: serverTimestamp() });
-      toast({ title: "Order Status Updated", description: `Order ${orderId.substring(0,8)}... is now ${newStatus}.` });
+      toast({ title: "Order Status Updated", description: `Order #${orderId.substring(0,8)}... is now ${newStatus}.` });
     } catch (error) {
       console.error("Error updating order status:", error);
       toast({ title: "Update Error", description: "Could not update order status.", variant: "destructive" });
@@ -184,16 +184,16 @@ export default function OrdersPage() {
                   </div>
                   {order.status === 'pending' && (
                     <div className="flex gap-2 w-full md:w-auto">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
+                      <Button
+                        variant="outline"
+                        size="sm"
                         className="flex-1 md:flex-none border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
                         onClick={() => handleStatusChange(order.id, 'cancelled')}
                       >
                         <Ban className="mr-2 h-4 w-4" /> Cancel Order
                       </Button>
-                      <Button 
-                        size="sm" 
+                      <Button
+                        size="sm"
                         className="flex-1 md:flex-none bg-green-600 hover:bg-green-700 text-white"
                         onClick={() => handleStatusChange(order.id, 'confirmed')}
                       >
@@ -201,7 +201,6 @@ export default function OrdersPage() {
                       </Button>
                     </div>
                   )}
-                  {/* Removed status badge from here as it's in the header */}
                 </CardFooter>
               </Card>
             );
