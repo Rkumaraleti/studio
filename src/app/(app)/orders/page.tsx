@@ -17,14 +17,19 @@ import { formatDistanceToNow } from 'date-fns';
 
 const orderStatusMap: Record<OrderStatus | 'paid', { label: string; icon: React.ElementType; color: string; textColor?: string }> = {
   pending: { label: "Pending", icon: Hourglass, color: "bg-yellow-500", textColor: "text-yellow-50" },
-  paid: { label: "Paid (Needs Action)", icon: Hourglass, color: "bg-yellow-500", textColor: "text-yellow-50" },
+  paid: { label: "Paid (Needs Action)", icon: Hourglass, color: "bg-yellow-500", textColor: "text-yellow-50" }, // Keep paid for backward compatibility if needed
   confirmed: { label: "Confirmed", icon: CheckCircle2, color: "bg-green-600", textColor: "text-green-50" },
   cancelled: { label: "Cancelled", icon: XCircle, color: "bg-red-600", textColor: "text-red-50" },
 };
 
+const formatPrice = (price: number, currencyCode: string = 'INR') => {
+  const symbol = currencyCode === 'INR' ? '₹' : '$';
+  return `${symbol}${price.toFixed(2)}`;
+};
+
 export default function OrdersPage() {
   const { user, loading: authLoading } = useAuth();
-  const { publicMerchantId, isLoadingProfile } = useMerchantProfile();
+  const { profile, publicMerchantId, isLoadingProfile } = useMerchantProfile();
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoadingOrders, setIsLoadingOrders] = useState(true);
   const { toast } = useToast();
@@ -88,6 +93,8 @@ export default function OrdersPage() {
       return 'a while ago';
     }
   };
+
+  const currentCurrencyCode = profile?.currency || "INR";
 
   if (authLoading || isLoadingProfile || (isLoadingOrders && user && publicMerchantId)) {
     return (
@@ -161,14 +168,14 @@ export default function OrdersPage() {
                     <p className="text-sm font-medium leading-none mb-1">Items</p>
                     <ul className="list-disc list-inside text-sm text-muted-foreground space-y-0.5">
                       {order.items.map(item => (
-                        <li key={item.id}>{item.quantity}x {item.name} (${item.price.toFixed(2)} each)</li>
+                        <li key={item.id}>{item.quantity}x {item.name} ({formatPrice(item.price, currentCurrencyCode)} each)</li>
                       ))}
                     </ul>
                   </div>
                   <div>
                     <p className="text-sm font-medium leading-none">Total Amount</p>
                     <p className="text-lg font-semibold text-primary">
-                      ${order.totalAmount.toFixed(2)}
+                      {formatPrice(order.totalAmount, currentCurrencyCode)}
                     </p>
                   </div>
                   {order.notes && (

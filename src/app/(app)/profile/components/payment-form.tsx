@@ -28,11 +28,10 @@ import { deleteField } from "firebase/firestore"; // Import deleteField
 
 const paymentFormSchema = z.object({
   restaurantName: z.string().min(2, "Restaurant name is required"),
-  restaurantDescription: z.string().max(200, "Description must be 200 characters or less").optional(),
-  currency: z.string().length(3, "Currency code must be 3 letters, e.g., USD").toUpperCase(),
+  restaurantDescription: z.string().max(200, "Description must be 200 characters or less").optional().or(z.literal('')),
+  currency: z.string().length(3, "Currency code must be 3 letters, e.g., INR").toUpperCase(),
   paymentGatewayConfigured: z.boolean().default(false),
   paymentGatewayAccountId: z.string().optional(),
-  // staticMenuUrl is managed by useMerchantProfile, displayed here read-only
 });
 
 type PaymentFormData = z.infer<typeof paymentFormSchema>;
@@ -46,7 +45,7 @@ export function PaymentForm() {
     defaultValues: {
       restaurantName: "",
       restaurantDescription: "",
-      currency: "USD",
+      currency: "INR", // Default to INR
       paymentGatewayConfigured: false,
       paymentGatewayAccountId: "",
     },
@@ -57,7 +56,7 @@ export function PaymentForm() {
       form.reset({
         restaurantName: profile.restaurantName || "",
         restaurantDescription: profile.restaurantDescription || "",
-        currency: profile.currency || "USD",
+        currency: profile.currency || "INR", // Default to INR if profile currency is missing
         paymentGatewayConfigured: profile.paymentGatewayConfigured || false,
         paymentGatewayAccountId: profile.paymentGatewayAccountId || "",
       });
@@ -68,9 +67,9 @@ export function PaymentForm() {
     try {
       const updateData: Partial<PaymentFormData & { restaurantDescription?: any }> = { ...data };
       if (data.restaurantDescription === "") {
-        updateData.restaurantDescription = deleteField(); // Use deleteField()
+        updateData.restaurantDescription = deleteField(); 
       }
-      // Exclude staticMenuUrl from form submission if it's ever part of the form values directly
+      
       const { ...dataToSubmit } = updateData;
       await updateProfile(dataToSubmit);
       toast({
@@ -184,9 +183,9 @@ export function PaymentForm() {
                 <FormItem>
                   <FormLabel>Default Currency</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., USD, EUR, JPY" {...field} onChange={(e) => field.onChange(e.target.value.toUpperCase())} />
+                    <Input placeholder="e.g., INR, USD, EUR" {...field} onChange={(e) => field.onChange(e.target.value.toUpperCase())} />
                   </FormControl>
-                  <FormDescription>Enter the 3-letter ISO currency code (e.g., USD).</FormDescription>
+                  <FormDescription>Enter the 3-letter ISO currency code (e.g., INR).</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}

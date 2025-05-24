@@ -1,18 +1,26 @@
+
 "use client";
 
 import Image from "next/image";
 import type { MenuItem } from "@/lib/types";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Edit2, Trash2, DollarSign, Tag, ImageOff } from "lucide-react";
+import { Edit2, Trash2, Tag, ImageOff } from "lucide-react";
+
+const formatPrice = (price: number, currencyCode: string = 'INR') => {
+  const symbol = currencyCode === 'INR' ? '₹' : '$';
+  // Use Intl.NumberFormat for better locale-aware currency formatting if needed in future.
+  return `${symbol}${price.toFixed(2)}`;
+};
 
 interface MenuItemCardDisplayProps {
   item: MenuItem;
   onEdit: (item: MenuItem) => void;
   onDelete: (itemId: string) => void;
+  currencyCode: string; // Added currencyCode prop
 }
 
-export function MenuItemCardDisplay({ item, onEdit, onDelete }: MenuItemCardDisplayProps) {
+export function MenuItemCardDisplay({ item, onEdit, onDelete, currencyCode }: MenuItemCardDisplayProps) {
   return (
     <Card className="overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-200 flex flex-col">
       {item.imageUrl ? (
@@ -36,7 +44,8 @@ export function MenuItemCardDisplay({ item, onEdit, onDelete }: MenuItemCardDisp
       <CardContent className="flex-grow">
         <p className="text-sm text-muted-foreground mb-3 line-clamp-3">{item.description}</p>
         <div className="flex items-center text-sm text-primary mb-1">
-          <DollarSign className="h-4 w-4 mr-1" /> Price: ${item.price.toFixed(2)}
+          {/* Using a span for the currency symbol and price to avoid Lucide icon confusion */}
+          Price: {formatPrice(item.price, currencyCode)}
         </div>
         <div className="flex items-center text-sm text-muted-foreground">
           <Tag className="h-4 w-4 mr-1" /> Category: {item.category}

@@ -20,7 +20,17 @@ import {
   SheetClose,
 } from "@/components/ui/sheet";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { useCart } from "@/hooks/use-cart";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useCart } from "@/hooks/use-cart"; // Corrected path
 import { useToast } from "@/hooks/use-toast";
 import { db, auth } from "@/lib/firebase/config";
 import { collection, query, where, getDocs, orderBy, limit, addDoc, serverTimestamp, doc, onSnapshot, DocumentReference } from "firebase/firestore";
@@ -52,12 +62,17 @@ const generateDisplayOrderId = () => {
   return `${prefix}-${randomPart}`;
 };
 
+const formatPrice = (price: number, currencyCode: string = 'INR') => {
+  const symbol = currencyCode === 'INR' ? '₹' : '$';
+  return `${symbol}${price.toFixed(2)}`;
+};
+
 
 export default function MerchantMenuPage() {
   const params = useParams();
   const publicIdFromUrl = params.merchantId as string;
 
-  console.log("[MerchantMenuPage] Component invoked. Raw params:", params, "Extracted publicIdFromUrl:", publicIdFromUrl); // Diagnostic Log
+  console.log("[MerchantMenuPage] Component invoked. Raw params:", params, "Extracted publicIdFromUrl:", publicIdFromUrl);
 
   const [merchantProfile, setMerchantProfile] = useState<MerchantProfile | null>(null);
   const [menuCategories, setMenuCategories] = useState<MenuCategory[]>([]);
@@ -66,15 +81,14 @@ export default function MerchantMenuPage() {
   const [error, setError] = useState<string | null>(null);
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
 
-  // State for order tracking
-  const [viewMode, setViewMode] = useState<'menu' | 'tracking'>('menu'); // 'menu' or 'tracking'
-  const [activeOrderId, setActiveOrderId] = useState<string | null>(null); // Firestore Document ID
+  const [viewMode, setViewMode] = useState<'menu' | 'tracking'>('menu'); 
+  const [activeOrderId, setActiveOrderId] = useState<string | null>(null); 
   const [activeDisplayOrderId, setActiveDisplayOrderId] = useState<string | null>(null);
   const [activeOrderStatus, setActiveOrderStatus] = useState<OrderStatus | null>(null);
 
-
   const { 
     items: cartItems, 
+    addItem, // Added addItem to destructuring
     updateQuantity, 
     removeItem, 
     clearCart,
@@ -86,8 +100,8 @@ export default function MerchantMenuPage() {
 
   const totalCartItems = getTotalItems();
   const totalCartPrice = getTotalPrice();
+  const currentCurrencyCode = merchantProfile?.currency || "INR";
 
-  // Fetch initial menu data
   useEffect(() => {
     console.log("[MerchantMenuPage] useEffect for initial data. publicIdFromUrl:", publicIdFromUrl);
 
@@ -108,7 +122,6 @@ export default function MerchantMenuPage() {
       try {
         console.log("[MerchantMenuPage] Fetching merchant profile for publicId:", publicIdFromUrl);
         const merchantsCollectionRef = collection(db, "merchants");
-        // Query to find the merchant document where 'publicMerchantId' matches publicIdFromUrl
         const merchantQuery = query(merchantsCollectionRef, where("publicMerchantId", "==", publicIdFromUrl), limit(1));
         const merchantQuerySnapshot = await getDocs(merchantQuery);
 
@@ -128,7 +141,7 @@ export default function MerchantMenuPage() {
         const menuItemsCollectionRef = collection(db, "menuItems");
         const itemsQuery = query(
           menuItemsCollectionRef, 
-          where("merchantId", "==", publicIdFromUrl), // merchantId in menuItems should be publicMerchantId
+          where("merchantId", "==", publicIdFromUrl), 
           orderBy("category"), 
           orderBy("name")
         );
@@ -154,9 +167,8 @@ export default function MerchantMenuPage() {
     };
 
     fetchData();
-  }, [publicIdFromUrl, toast]); // Added toast to dependencies as it's used in effects
+  }, [publicIdFromUrl]); 
 
-  // Real-time listener for active order status
   useEffect(() => {
     if (!activeOrderId || viewMode !== 'tracking') {
       return; 
@@ -178,7 +190,7 @@ export default function MerchantMenuPage() {
             duration: 7000, 
           });
           setTimeout(() => {
-            if (typeof window !== 'undefined') window.close();
+             try { if (typeof window !== 'undefined' && window.close) window.close(); } catch (e) { console.warn("Could not close window:", e); }
           }, 3000); 
         } else if (orderData.status === 'cancelled') {
           toast({
@@ -188,8 +200,8 @@ export default function MerchantMenuPage() {
             duration: 7000,
           });
            setTimeout(() => {
-            if (typeof window !== 'undefined') window.close();
-          }, 3000);
+             try { if (typeof window !== 'undefined' && window.close) window.close(); } catch (e) { console.warn("Could not close window:", e); }
+           }, 3000);
         }
       } else {
         console.warn(`[MerchantMenuPage] Active order document ${activeOrderId} not found.`);
@@ -228,7 +240,6 @@ export default function MerchantMenuPage() {
     }
 
     const currentUserForOrder = auth.currentUser; 
-
     if (!currentUserForOrder) {
         toast({
             title: "Authentication Error",
@@ -238,6 +249,8 @@ export default function MerchantMenuPage() {
         setIsSubmittingOrder(false);
         return;
     }
+    console.log("[MerchantMenuPage] Proceeding to checkout with user:", currentUserForOrder.uid);
+
 
     setIsSubmittingOrder(true);
     const displayOrderId = generateDisplayOrderId();
@@ -264,10 +277,8 @@ export default function MerchantMenuPage() {
       setViewMode('tracking'); 
       clearCart();
       
-      toast({
-        title: "Order Placed!",
-        description: `Your Order ID: ${displayOrderId}. Waiting for confirmation...`,
-      });
+      // No immediate toast, the tracking view will provide updates.
+      console.log(`Order ${displayOrderId} placed successfully. Firestore ID: ${docRef.id}`);
 
     } catch (error: any) {
       console.error("Error placing order:", error);
@@ -364,8 +375,6 @@ export default function MerchantMenuPage() {
     );
   }
 
-
-  // Default: Menu View
   return (
     <div className="space-y-6">
        {merchantProfile?.restaurantDescription && (
@@ -398,7 +407,7 @@ export default function MerchantMenuPage() {
             <ScrollArea className="w-full whitespace-nowrap pb-4">
               <div className="flex space-x-4">
                 {category.items.map((item) => (
-                  <MenuDisplayItem key={item.id} item={item} />
+                  <MenuDisplayItem key={item.id} item={item} currencyCode={currentCurrencyCode} />
                 ))}
               </div>
               <ScrollBar orientation="horizontal" />
@@ -414,8 +423,7 @@ export default function MerchantMenuPage() {
           )}
         </section>
       ))}
-
-      {/* Sticky Bottom Bar - Always visible */}
+      
       <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border shadow-lg p-4 z-50">
         <div className="flex items-center justify-between gap-4">
           <Sheet>
@@ -441,7 +449,7 @@ export default function MerchantMenuPage() {
                       {totalCartItems} item{totalCartItems !== 1 ? 's' : ''} in cart
                     </p>
                     <p className="text-xs text-muted-foreground group-hover:text-primary transition-colors">
-                      Total: <span className="font-bold text-primary">${totalCartPrice.toFixed(2)}</span>
+                      Total: <span className="font-bold text-primary">{formatPrice(totalCartPrice, currentCurrencyCode)}</span>
                     </p>
                   </div>
                 )}
@@ -480,7 +488,7 @@ export default function MerchantMenuPage() {
                         )}
                         <div className="flex-1">
                           <h4 className="font-semibold">{cartItemEntry.name}</h4>
-                          <p className="text-sm text-muted-foreground">${cartItemEntry.price.toFixed(2)} each</p>
+                          <p className="text-sm text-muted-foreground">{formatPrice(cartItemEntry.price, currentCurrencyCode)} each</p>
                           <div className="flex items-center gap-2 mt-2">
                             <Button
                               variant="outline"
@@ -506,7 +514,7 @@ export default function MerchantMenuPage() {
                           </div>
                         </div>
                         <div className="text-right">
-                            <p className="font-semibold">${(cartItemEntry.price * cartItemEntry.quantity).toFixed(2)}</p>
+                            <p className="font-semibold">{formatPrice(cartItemEntry.price * cartItemEntry.quantity, currentCurrencyCode)}</p>
                             <Button
                               variant="ghost"
                               size="icon"
@@ -548,7 +556,7 @@ export default function MerchantMenuPage() {
             ) : (
               <CreditCard className="mr-2 h-5 w-5" />
             )}
-            Pay ${totalCartPrice.toFixed(2)}
+            Pay {formatPrice(totalCartPrice, currentCurrencyCode)}
           </Button>
         </div>
       </div>
@@ -561,5 +569,3 @@ export default function MerchantMenuPage() {
     </div>
   );
 }
-
-    

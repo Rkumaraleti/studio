@@ -31,7 +31,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 
 export default function MenuBuilderPage() {
   const { user, loading: authLoading } = useAuth();
-  const { publicMerchantId, isLoadingProfile: isLoadingMerchantProfile } = useMerchantProfile();
+  const { profile, publicMerchantId, isLoadingProfile: isLoadingMerchantProfile } = useMerchantProfile();
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [editingItem, setEditingItem] = useState<MenuItem | undefined>(undefined);
   const { toast } = useToast();
@@ -103,10 +103,9 @@ export default function MenuBuilderPage() {
     try {
       if (editingItem) {
         const itemDocRef = doc(db, "menuItems", editingItem.id);
-        const { merchantId: currentItemMerchantId, ...restOfData } = data as any;
         const updatedData = {
-            ...restOfData,
-            merchantId: publicMerchantId, 
+            ...data, // Omit<MenuItem, 'id' | 'merchantId' | 'createdAt' | 'updatedAt'>
+            merchantId: publicMerchantId, // Ensure merchantId is correctly set for updates too
             updatedAt: serverTimestamp()
         };
         console.log("[MenuBuilderPage] Attempting to update item:", editingItem.id, "with data:", updatedData);
@@ -161,10 +160,12 @@ export default function MenuBuilderPage() {
       toast({ title: "Delete Error", description, variant: "destructive" });
     }
   };
+  
+  const currentCurrencyCode = profile?.currency || "INR"; // Default to INR if profile or currency is not loaded
 
   if (authLoading || isLoadingMerchantProfile || (isLoadingItems && user && publicMerchantId)) {
     return (
-      <div className="flex justify-center items-center h-64 p-4 md:p-6 lg:p-8"> {/* Added padding here */}
+      <div className="flex justify-center items-center h-64 p-4 md:p-6 lg:p-8"> 
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
         <p className="ml-4 text-lg">Loading menu data...</p>
       </div>
@@ -173,7 +174,7 @@ export default function MenuBuilderPage() {
 
   if (!user && !authLoading) {
      return (
-      <div className="space-y-8 text-center p-4 md:p-6 lg:p-8"> {/* Added padding here */}
+      <div className="space-y-8 text-center p-4 md:p-6 lg:p-8"> 
         <h1 className="text-3xl font-bold tracking-tight text-primary mb-2">Menu Builder</h1>
          <Alert variant="destructive">
             <Info className="h-4 w-4" />
@@ -188,7 +189,7 @@ export default function MenuBuilderPage() {
 
   if (user && !publicMerchantId && !isLoadingMerchantProfile) {
     return (
-      <div className="space-y-8 text-center p-4 md:p-6 lg:p-8"> {/* Added padding here */}
+      <div className="space-y-8 text-center p-4 md:p-6 lg:p-8"> 
         <h1 className="text-3xl font-bold tracking-tight text-primary mb-2">Menu Builder</h1>
          <Alert variant="default">
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -203,7 +204,7 @@ export default function MenuBuilderPage() {
 
 
   return (
-    <div className="space-y-8 p-4 md:p-6 lg:p-8"> {/* Added padding here */}
+    <div className="space-y-8 p-4 md:p-6 lg:p-8"> 
       <div>
         <h1 className="text-3xl font-bold tracking-tight text-primary mb-2">Menu Builder</h1>
         <p className="text-muted-foreground">
@@ -252,6 +253,7 @@ export default function MenuBuilderPage() {
                 item={item}
                 onEdit={handleEditItem}
                 onDelete={handleDeleteItem}
+                currencyCode={currentCurrencyCode} // Pass currency code
               />
             ))}
           </div>
