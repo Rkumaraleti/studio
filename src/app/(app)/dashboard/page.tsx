@@ -10,7 +10,7 @@ import { useMerchantProfile } from "@/hooks/use-merchant-profile";
 import { db } from "@/lib/firebase/config";
 import { collection, query, where, getCountFromServer, Timestamp, orderBy, getDocs } from "firebase/firestore";
 import { useEffect, useState } from "react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'; // Removed Legend as it's not used
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { format, subDays, startOfDay, endOfDay } from 'date-fns';
 
@@ -109,7 +109,7 @@ export default function DashboardPage() {
             where("merchantPublicId", "==", publicMerchantId),
             where("createdAt", ">=", sevenDaysAgoTimestamp),
             where("createdAt", "<=", endOfTodayForChart),
-            orderBy("createdAt", "asc")
+            orderBy("createdAt", "desc") // Changed to "desc" to match existing index
         );
         const querySnapshot = await getDocs(last7DaysOrdersQuery);
         console.log("[Dashboard] Chart querySnapshot size:", querySnapshot.size);
@@ -144,9 +144,9 @@ export default function DashboardPage() {
         console.log("[Dashboard] Populated dailyCounts:", JSON.stringify(dailyCounts));
         
         const chartData = Object.keys(dailyCounts)
-            .sort((a,b) => new Date(a).getTime() - new Date(b).getTime())
+            .sort((a,b) => new Date(a).getTime() - new Date(b).getTime()) // Sort by date string asc for chart
             .map(dateStr => ({
-                date: format(new Date(dateStr), 'EEE'),
+                date: format(new Date(dateStr), 'EEE'), // Format date for X-axis display (e.g., 'Mon')
                 orders: dailyCounts[dateStr]
             }));
             
