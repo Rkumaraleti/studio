@@ -15,8 +15,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatDistanceToNow } from 'date-fns';
 
-const orderStatusMap: Record<OrderStatus, { label: string; icon: React.ElementType; color: string; textColor?: string }> = {
+const orderStatusMap: Record<OrderStatus | 'paid', { label: string; icon: React.ElementType; color: string; textColor?: string }> = {
   pending: { label: "Pending", icon: Hourglass, color: "bg-yellow-500", textColor: "text-yellow-50" },
+  paid: { label: "Paid (Needs Action)", icon: Hourglass, color: "bg-yellow-500", textColor: "text-yellow-50" }, // Handle legacy 'paid'
   confirmed: { label: "Confirmed", icon: CheckCircle2, color: "bg-green-600", textColor: "text-green-50" },
   cancelled: { label: "Cancelled", icon: XCircle, color: "bg-red-600", textColor: "text-red-50" },
 };
@@ -138,7 +139,7 @@ export default function OrdersPage() {
         <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
           {orders.map(order => {
             console.log('Order being rendered:', order.id, 'Status:', order.status); // Diagnostic log
-            const statusInfo = orderStatusMap[order.status] || { label: order.status, icon: Info, color: "bg-gray-500", textColor: "text-gray-50" };
+            const statusInfo = orderStatusMap[order.status as OrderStatus | 'paid'] || { label: order.status, icon: Info, color: "bg-gray-500", textColor: "text-gray-50" };
             const StatusIcon = statusInfo.icon;
 
             return (
@@ -183,7 +184,7 @@ export default function OrdersPage() {
                   <div className="text-xs text-muted-foreground flex items-center">
                     <RefreshCw className="h-3 w-3 mr-1" /> Updated {getRelativeTime(order.updatedAt || order.createdAt)}
                   </div>
-                  {order.status === 'pending' && (
+                  {(order.status === 'pending' || order.status === 'paid') && (
                     <div className="flex gap-2 w-full md:w-auto">
                       <Button
                         variant="outline"
@@ -211,3 +212,4 @@ export default function OrdersPage() {
     </div>
   );
 }
+
