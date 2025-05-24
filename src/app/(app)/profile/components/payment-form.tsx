@@ -18,7 +18,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Banknote, Save, ShieldCheck, Loader2, Info, Building } from "lucide-react";
+import { Banknote, Save, ShieldCheck, Loader2, Info, Building, Link as LinkIcon } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { useMerchantProfile } from "@/hooks/use-merchant-profile";
@@ -31,6 +31,7 @@ const paymentFormSchema = z.object({
   currency: z.string().length(3, "Currency code must be 3 letters, e.g., USD").toUpperCase(),
   paymentGatewayConfigured: z.boolean().default(false),
   paymentGatewayAccountId: z.string().optional(),
+  // staticMenuUrl is managed by useMerchantProfile, displayed here read-only
 });
 
 type PaymentFormData = z.infer<typeof paymentFormSchema>;
@@ -68,7 +69,9 @@ export function PaymentForm() {
       if (updateData.restaurantDescription === "") {
         updateData.restaurantDescription = undefined; // Ensure empty string becomes undefined for Firestore
       }
-      await updateProfile(updateData);
+      // Exclude staticMenuUrl from form submission if it's ever part of the form values directly
+      const { ...dataToSubmit } = updateData; 
+      await updateProfile(dataToSubmit);
       toast({
         title: "Profile Updated",
         description: "Your restaurant information has been saved.",
@@ -133,7 +136,8 @@ export function PaymentForm() {
           Restaurant Information
         </CardTitle>
         <CardDescription>
-          Manage your restaurant details and payment configurations. Your Public Menu ID is: <strong>{publicMerchantId || "Generating..."}</strong>
+          Manage your restaurant details and payment configurations. <br/>
+          Public Menu ID: <strong>{publicMerchantId || "Generating..."}</strong>
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -186,6 +190,22 @@ export function PaymentForm() {
                 </FormItem>
               )}
             />
+
+            <FormItem>
+              <FormLabel>Static Menu URL (for QR Code)</FormLabel>
+              <div className="flex items-center gap-2">
+                 <LinkIcon className="h-5 w-5 text-muted-foreground" />
+                <Input 
+                  value={profile?.staticMenuUrl || "Generating..."} 
+                  readOnly 
+                  className="bg-muted text-muted-foreground text-sm"
+                />
+              </div>
+              <FormDescription>
+                This is the URL your QR code points to. You can refresh/update it on the "QR Code" page.
+              </FormDescription>
+            </FormItem>
+
 
             <SeparatorWithText text="Payment Gateway Configuration" icon={<Banknote className="mr-2 h-5 w-5" />} />
             

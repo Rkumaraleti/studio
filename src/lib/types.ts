@@ -28,6 +28,7 @@ export interface MerchantProfile {
   publicMerchantId: string; // The new publicly shareable, generated merchant ID
   restaurantName: string;
   restaurantDescription?: string; // Optional description for the restaurant
+  staticMenuUrl?: string; // The canonical URL for the QR code
   paymentGatewayConfigured: boolean;
   paymentGatewayAccountId?: string;
   currency: string; // e.g., "USD"

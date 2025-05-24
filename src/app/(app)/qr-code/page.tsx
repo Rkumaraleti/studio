@@ -6,38 +6,50 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Download, QrCode as QrCodeIcon, Share2, Copy, Smartphone, Loader2, AlertTriangle } from 'lucide-react';
+import { Download, QrCode as QrCodeIcon, Share2, Copy, Smartphone, Loader2, AlertTriangle, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { useMerchantProfile } from '@/hooks/use-merchant-profile'; 
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export default function QrCodePage() {
-  const [menuUrl, setMenuUrl] = useState('');
-  const [qrCodeUrl, setQrCodeUrl] = useState('');
+  const [currentDisplayMenuUrl, setCurrentDisplayMenuUrl] = useState('');
+  const [qrCodeImageUrl, setQrCodeImageUrl] = useState('');
   const { toast } = useToast();
-  const { publicMerchantId, isLoadingProfile } = useMerchantProfile();
+  const { profile, publicMerchantId, isLoadingProfile, regenerateAndSaveStaticMenuUrl } = useMerchantProfile();
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && publicMerchantId) {
-      const currentOrigin = window.location.origin;
-      const url = `${currentOrigin}/menu/${publicMerchantId}`;
-      setMenuUrl(url);
-      setQrCodeUrl(`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(url)}&format=png&qzone=1&margin=10&ecc=M`);
-    } else if (!isLoadingProfile && !publicMerchantId) {
-      setMenuUrl('');
-      setQrCodeUrl('');
+    if (profile && profile.staticMenuUrl) {
+      setCurrentDisplayMenuUrl(profile.staticMenuUrl);
+      setQrCodeImageUrl(`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(profile.staticMenuUrl)}&format=png&qzone=1&margin=10&ecc=M`);
+    } else if (!isLoadingProfile && profile && !profile.staticMenuUrl) {
+      // This case means profile is loaded but staticMenuUrl is somehow missing/pending creation by the hook
+      setCurrentDisplayMenuUrl('Generating menu URL...');
+      setQrCodeImageUrl('');
+    } else if (!isLoadingProfile && !publicMerchantId) { // Or !profile
+      setCurrentDisplayMenuUrl('');
+      setQrCodeImageUrl('');
     }
-  }, [publicMerchantId, isLoadingProfile]);
+    // If isLoadingProfile, we wait for profile data
+  }, [profile, isLoadingProfile, publicMerchantId]);
 
   const handleDownload = () => {
-    if (!qrCodeUrl) return;
+    if (!qrCodeImageUrl) return;
     const link = document.createElement('a');
-    link.href = qrCodeUrl; 
-    // It's better to fetch the image as a blob if the server supports CORS and you need to control filename more reliably
-    // or if it's not a direct image link. However, for qrserver.com, direct link download works.
-    link.download = `menu-qr-code-${publicMerchantId || 'unknown'}.png`;
+    link.href = qrCodeImageUrl; 
+    link.download = `menu-qr-code-${publicMerchantId || 'merchant'}.png`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -45,8 +57,8 @@ export default function QrCodePage() {
   };
   
   const handleCopyUrl = () => {
-    if (!menuUrl) return;
-    navigator.clipboard.writeText(menuUrl)
+    if (!currentDisplayMenuUrl || currentDisplayMenuUrl === 'Generating menu URL...') return;
+    navigator.clipboard.writeText(currentDisplayMenuUrl)
       .then(() => {
         toast({ title: "URL Copied!", description: "Menu URL copied to clipboard." });
       })
@@ -56,9 +68,19 @@ export default function QrCodePage() {
       });
   };
 
+  const handleRegenerateUrl = async () => {
+    if (regenerateAndSaveStaticMenuUrl) {
+      await regenerateAndSaveStaticMenuUrl();
+      // Toast notification is handled within the hook
+    } else {
+      toast({ title: "Error", description: "Could not regenerate URL at this time.", variant: "destructive" });
+    }
+  };
+
+
   if (isLoadingProfile) {
     return (
-      <div className="space-y-8 p-4 md:p-6 lg:p-8"> {/* Standard page padding */}
+      <div className="space-y-8 p-4 md:p-6 lg:p-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight text-primary mb-2">Your Menu QR Code</h1>
           <p className="text-muted-foreground flex items-center">
@@ -93,7 +115,7 @@ export default function QrCodePage() {
 
   if (!publicMerchantId && !isLoadingProfile) {
     return (
-      <div className="space-y-8 p-4 md:p-6 lg:p-8"> {/* Standard page padding */}
+      <div className="space-y-8 p-4 md:p-6 lg:p-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight text-primary mb-2">QR Code Unavailable</h1>
         </div>
@@ -101,16 +123,33 @@ export default function QrCodePage() {
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>Merchant ID Not Found</AlertTitle>
           <AlertDescription>
-            We couldn't load your public Merchant ID. Please ensure you are logged in, your profile is set up, and try again.
-            If this issue persists, your profile might still be finalizing.
+            We couldn't load your public Merchant ID. Please ensure your profile is set up.
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+  
+  if (!profile?.staticMenuUrl && !isLoadingProfile) {
+     return (
+      <div className="space-y-8 p-4 md:p-6 lg:p-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold tracking-tight text-primary mb-2">QR Code Pending</h1>
+        </div>
+        <Alert variant="default" className="max-w-2xl mx-auto">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <AlertTitle>Menu URL Finalizing</AlertTitle>
+          <AlertDescription>
+            Your unique menu URL is being prepared. This page will update shortly.
           </AlertDescription>
         </Alert>
       </div>
     );
   }
 
+
   return (
-    <div className="space-y-8 p-4 md:p-6 lg:p-8"> {/* Standard page padding */}
+    <div className="space-y-8 p-4 md:p-6 lg:p-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold tracking-tight text-primary mb-2">Your Menu QR Code</h1>
         <p className="text-muted-foreground">
@@ -118,7 +157,7 @@ export default function QrCodePage() {
         </p>
       </div>
 
-      <div className="space-y-8 max-w-2xl mx-auto"> {/* Centered content wrapper */}
+      <div className="space-y-8 max-w-2xl mx-auto">
         <Card className="shadow-xl overflow-hidden">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl flex items-center justify-center">
@@ -127,10 +166,10 @@ export default function QrCodePage() {
             <CardDescription>Point your camera here to view the menu.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col items-center gap-6">
-            {qrCodeUrl ? (
+            {qrCodeImageUrl ? (
               <div className="p-4 bg-white rounded-lg shadow-inner inline-block">
                 <Image 
-                  src={qrCodeUrl} 
+                  src={qrCodeImageUrl} 
                   alt="Menu QR Code" 
                   width={280} 
                   height={280}
@@ -144,24 +183,47 @@ export default function QrCodePage() {
             )}
             
             <div className="w-full space-y-2">
-              <Label htmlFor="menu-url" className="text-sm font-medium text-left block">Your Menu URL:</Label>
+              <Label htmlFor="menu-url" className="text-sm font-medium text-left block">Your Static Menu URL:</Label>
               <div className="flex gap-2">
-                <Input id="menu-url" type="text" value={menuUrl} readOnly className="bg-muted text-muted-foreground"/>
-                <Button variant="outline" size="icon" onClick={handleCopyUrl} title="Copy URL" disabled={!menuUrl}>
+                <Input id="menu-url" type="text" value={currentDisplayMenuUrl} readOnly className="bg-muted text-muted-foreground"/>
+                <Button variant="outline" size="icon" onClick={handleCopyUrl} title="Copy URL" disabled={!currentDisplayMenuUrl || currentDisplayMenuUrl === 'Generating menu URL...'}>
                   <Copy className="h-4 w-4" />
                 </Button>
               </div>
             </div>
 
-            <div className="flex flex-wrap justify-center gap-4 mt-4">
-              <Button onClick={handleDownload} size="lg" disabled={!qrCodeUrl}>
+            <div className="flex flex-wrap justify-center items-center gap-4 mt-4">
+              <Button onClick={handleDownload} size="lg" disabled={!qrCodeImageUrl}>
                 <Download className="mr-2 h-5 w-5" /> Download QR
               </Button>
               {typeof navigator !== 'undefined' && navigator.share && (
-                <Button variant="outline" onClick={() => navigator.share({ title: 'Our Digital Menu', url: menuUrl })} size="lg" disabled={!menuUrl}>
+                <Button variant="outline" onClick={() => navigator.share({ title: 'Our Digital Menu', url: currentDisplayMenuUrl })} size="lg" disabled={!currentDisplayMenuUrl || currentDisplayMenuUrl === 'Generating menu URL...'}>
                   <Share2 className="mr-2 h-5 w-5" /> Share Menu Link
                 </Button>
               )}
+               <AlertDialog>
+                <AlertDialogTrigger asChild>
+                   <Button variant="outline" size="lg" disabled={!regenerateAndSaveStaticMenuUrl || isLoadingProfile}>
+                    <RefreshCw className="mr-2 h-5 w-5" /> Refresh/Update URL
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Update Menu URL?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will update the stored menu URL for your QR code to use the current browser origin: <br/>
+                      <strong>{typeof window !== 'undefined' ? window.location.origin : ''}/menu/{publicMerchantId}</strong>.
+                      <br/><br/>
+                      If you have already printed QR codes, they will point to the old URL unless you regenerate and replace them.
+                      This is useful if your application's hosting domain has changed.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleRegenerateUrl}>Confirm Update</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           </CardContent>
         </Card>
@@ -171,14 +233,15 @@ export default function QrCodePage() {
               <CardTitle>Usage Tips</CardTitle>
           </CardHeader>
           <CardContent className="text-left space-y-2 text-sm text-muted-foreground">
+              <p>• The QR code always points to your unique Static Menu URL shown above.</p>
+              <p>• If your website's main address changes, use "Refresh/Update URL" to update this link, then download the new QR code.</p>
               <p>• Print the QR code and place it on tables, entrances, or flyers.</p>
-              <p>• Add the QR code to your website or social media profiles.</p>
               <p>• Ensure good lighting and a clear, non-reflective surface for easy scanning.</p>
           </CardContent>
         </Card>
 
-        <Button asChild variant="secondary" className="w-full" disabled={!menuUrl}>
-          <a href={menuUrl || '#'} target="_blank" rel="noopener noreferrer">
+        <Button asChild variant="secondary" className="w-full" disabled={!currentDisplayMenuUrl || currentDisplayMenuUrl === 'Generating menu URL...'}>
+          <a href={currentDisplayMenuUrl || '#'} target="_blank" rel="noopener noreferrer">
             <Smartphone className="mr-2 h-5 w-5" /> Open Menu in New Tab
           </a>
         </Button>
