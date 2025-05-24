@@ -30,6 +30,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
   const [isLoadingCart, setIsLoadingCart] = useState(true);
+  const [isAuthResolved, setIsAuthResolved] = useState(false); // New state
 
   const getCartStorageKey = useCallback(() => {
     if (currentUser) {
@@ -39,7 +40,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [currentUser]);
 
   useEffect(() => {
-    setIsLoadingCart(true);
+    // This effect only handles auth state resolution
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
         setCurrentUser(user);
@@ -49,24 +50,29 @@ export function CartProvider({ children }: { children: ReactNode }) {
             setCurrentUser(userCredential.user);
           })
           .catch((error) => {
-            console.error("Error signing in anonymously:", error);
+            console.error("Error signing in anonymously for cart:", error);
             toast({
-              title: "Cart Initialization Error",
-              description: "Could not create a cart session. Please refresh.",
+              title: "Cart Session Error",
+              description: "Could not initialize a cart session. Please refresh.",
               variant: "destructive",
             });
             setCurrentUser(null);
-            setIsLoadingCart(false); // Stop loading if anonymous sign-in fails
           });
       }
+      setIsAuthResolved(true); // Mark auth as resolved
     });
     return () => unsubscribe();
   }, [toast]);
 
   useEffect(() => {
+    // This effect handles localStorage loading and setting isLoadingCart
+    if (!isAuthResolved) { // Don't do anything until auth state is known
+      setIsLoadingCart(true);
+      return;
+    }
+
     const storageKey = getCartStorageKey();
     if (storageKey && typeof window !== 'undefined') {
-      setIsLoadingCart(true);
       const storedCart = localStorage.getItem(storageKey);
       if (storedCart) {
         try {
@@ -75,42 +81,39 @@ export function CartProvider({ children }: { children: ReactNode }) {
             setItems(parsedItems);
           } else {
             localStorage.removeItem(storageKey);
-            setItems([]); // Initialize as empty if data is corrupt
+            setItems([]);
           }
         } catch (error) {
           console.error(`Failed to parse cart from localStorage for key ${storageKey}:`, error);
           localStorage.removeItem(storageKey);
-          setItems([]); // Initialize as empty if parsing fails
+          setItems([]);
         }
       } else {
-        setItems([]); // No cart found for this user, initialize as empty
+        setItems([]);
       }
-      setIsLoadingCart(false);
-    } else if (!currentUser) {
-      // Still waiting for user (anonymous or otherwise)
-      setIsLoadingCart(true);
-    } else {
-      // Current user exists, but storage key is somehow null (should not happen if logic is correct)
-      // Or, window is not defined (server-side rendering context, no localStorage access)
-      // In SSR, items will be empty, and loaded client-side.
-      if (typeof window === 'undefined') {
-          setIsLoadingCart(false); // Not loading on server, cart will be empty
-      } else {
-          setIsLoadingCart(false); // Default to not loading if key is missing but user exists
-      }
+    } else if (typeof window !== 'undefined' && !storageKey && currentUser === null) {
+        // This case means anonymous sign-in failed and currentUser is explicitly null.
+        // Cart should be empty.
+        setItems([]);
+    } else if (typeof window === 'undefined') {
+      // SSR: cart is empty initially
+      setItems([]);
     }
-  }, [currentUser, getCartStorageKey]);
+    setIsLoadingCart(false); // Loading is complete once auth is resolved and localStorage is checked/loaded
+  }, [isAuthResolved, currentUser, getCartStorageKey]);
+
 
   useEffect(() => {
     const storageKey = getCartStorageKey();
-    // Only save if we are not in the initial loading phase AND a storage key is available
-    if (storageKey && typeof window !== 'undefined' && !isLoadingCart && items.length > 0) {
-      localStorage.setItem(storageKey, JSON.stringify(items));
-    } else if (storageKey && typeof window !== 'undefined' && !isLoadingCart && items.length === 0) {
-      // If cart becomes empty, remove it from localStorage for this user
-      localStorage.removeItem(storageKey);
+    if (storageKey && typeof window !== 'undefined' && !isLoadingCart) { // Only save if not loading and key exists
+      if (items.length > 0) {
+        localStorage.setItem(storageKey, JSON.stringify(items));
+      } else {
+        localStorage.removeItem(storageKey); // Remove if cart is empty
+      }
     }
   }, [items, getCartStorageKey, isLoadingCart]);
+
 
   const addItem = useCallback((item: MenuItem, quantity: number = 1) => {
     if (!currentUser || isLoadingCart) {

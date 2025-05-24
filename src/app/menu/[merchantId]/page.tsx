@@ -65,7 +65,7 @@ export default function MerchantMenuPage() {
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
 
   // State for order tracking
-  const [isTrackingOrder, setIsTrackingOrder] = useState(false);
+  const [viewMode, setViewMode] = useState<'menu' | 'tracking'>('menu'); // 'menu' or 'tracking'
   const [activeOrderId, setActiveOrderId] = useState<string | null>(null); // Firestore Document ID
   const [activeDisplayOrderId, setActiveDisplayOrderId] = useState<string | null>(null);
   const [activeOrderStatus, setActiveOrderStatus] = useState<OrderStatus | null>(null);
@@ -78,7 +78,7 @@ export default function MerchantMenuPage() {
     clearCart,
     getTotalItems, 
     getTotalPrice,
-    isLoadingCart,
+    isLoadingCart, // Used to disable pay button until cart (and anon user) is ready
   } = useCart();
   const { toast } = useToast();
 
@@ -155,10 +155,11 @@ export default function MerchantMenuPage() {
 
   // Real-time listener for active order status
   useEffect(() => {
-    if (!activeOrderId) {
-      return; // No active order to track
+    if (!activeOrderId || viewMode !== 'tracking') {
+      return; 
     }
 
+    console.log(`[MerchantMenuPage] Setting up listener for order ${activeOrderId}`);
     const orderDocRef = doc(db, "orders", activeOrderId);
     const unsubscribe = onSnapshot(orderDocRef, (docSnap) => {
       if (docSnap.exists()) {
@@ -170,23 +171,28 @@ export default function MerchantMenuPage() {
           toast({
             title: "Order Confirmed!",
             description: `Your order #${activeDisplayOrderId} has been confirmed by the restaurant.`,
-            variant: "default",
-            duration: 5000,
+            variant: "default", // Success variant
+            duration: 7000, // Longer duration
           });
-          setTimeout(() => window.close(), 3000); // Attempt to close after 3 seconds
+          setTimeout(() => {
+            if (typeof window !== 'undefined') window.close();
+          }, 3000); 
         } else if (orderData.status === 'cancelled') {
           toast({
             title: "Order Cancelled",
             description: `Your order #${activeDisplayOrderId} has been cancelled.`,
             variant: "destructive",
-            duration: 5000,
+            duration: 7000,
           });
-          setTimeout(() => window.close(), 3000); // Attempt to close after 3 seconds
+           setTimeout(() => {
+            if (typeof window !== 'undefined') window.close();
+          }, 3000);
         }
       } else {
-        // Order document might have been deleted, or ID is wrong
         console.warn(`[MerchantMenuPage] Active order document ${activeOrderId} not found.`);
-        // Optionally reset tracking state here if order is gone
+        setError("Your order details could not be retrieved. It might have been removed.");
+        setViewMode('menu'); // Revert to menu view if order doc is gone
+        setActiveOrderId(null);
       }
     }, (error) => {
       console.error(`[MerchantMenuPage] Error listening to order ${activeOrderId}:`, error);
@@ -201,24 +207,32 @@ export default function MerchantMenuPage() {
       console.log(`[MerchantMenuPage] Unsubscribing from order ${activeOrderId}`);
       unsubscribe();
     };
-  }, [activeOrderId, activeDisplayOrderId, toast]);
+  }, [activeOrderId, activeDisplayOrderId, toast, viewMode]);
 
 
   const handleProceedToCheckout = async () => {
     if (totalCartItems === 0) {
       toast({
         title: "Cart is Empty",
-        description: "Please add items to your cart before proceeding to checkout.",
+        description: "Please add items to your cart before proceeding.",
         variant: "destructive",
       });
       return;
     }
-    if (!auth.currentUser) {
+    if (isLoadingCart) { 
+      toast({ title: "Please wait", description: "Cart is still initializing.", variant: "default" });
+      return;
+    }
+
+    const currentUserForOrder = auth.currentUser; // Capture current user state at function start
+
+    if (!currentUserForOrder) {
         toast({
             title: "Authentication Error",
-            description: "Could not identify user for order. Please refresh.",
+            description: "Could not identify user for order. Please refresh or try again in a moment.",
             variant: "destructive",
         });
+        setIsSubmittingOrder(false);
         return;
     }
 
@@ -226,7 +240,7 @@ export default function MerchantMenuPage() {
     const displayOrderId = generateDisplayOrderId();
     const orderData: Omit<Order, 'id' | 'createdAt' | 'updatedAt'> = {
       displayOrderId,
-      customerUid: auth.currentUser.uid, 
+      customerUid: currentUserForOrder.uid, 
       merchantPublicId: publicIdFromUrl,
       items: cartItems,
       totalAmount: totalCartPrice,
@@ -241,10 +255,10 @@ export default function MerchantMenuPage() {
         updatedAt: serverTimestamp(),
       });
 
-      setActiveOrderId(docRef.id); // Store Firestore document ID
+      setActiveOrderId(docRef.id); 
       setActiveDisplayOrderId(displayOrderId);
       setActiveOrderStatus('pending');
-      setIsTrackingOrder(true); // Switch to tracking view
+      setViewMode('tracking'); // Switch to tracking view
       clearCart();
       
       toast({
@@ -299,7 +313,7 @@ export default function MerchantMenuPage() {
     );
   }
 
-  if (isTrackingOrder && activeDisplayOrderId) {
+  if (viewMode === 'tracking' && activeDisplayOrderId) {
     let statusMessage = "Waiting for confirmation...";
     let StatusIcon = Hourglass;
     let iconColor = "text-yellow-500";
@@ -331,7 +345,7 @@ export default function MerchantMenuPage() {
           {(activeOrderStatus === 'pending') && (
             <div className="flex items-center justify-center text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              <span>Please keep this window open. We'll notify you of updates.</span>
+              <span>Please keep this window open for updates.</span>
             </div>
           )}
            {(activeOrderStatus === 'confirmed' || activeOrderStatus === 'cancelled') && (
@@ -398,135 +412,143 @@ export default function MerchantMenuPage() {
         </section>
       ))}
 
-      {cartItems.length > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border shadow-lg p-4 z-50">
-          <div className="flex items-center justify-between gap-4">
-            <Sheet>
-              <SheetTrigger asChild>
-                <div className="flex-grow cursor-pointer flex items-center group">
-                  {isLoadingCart ? (
-                    <div className="flex items-center">
-                      <Loader2 className="mr-2 h-5 w-5 animate-spin text-primary" />
-                      <p className="text-md font-semibold group-hover:text-primary transition-colors">Loading cart...</p>
-                    </div>
-                  ) : (
-                    <div>
-                      <p className="text-md font-semibold group-hover:text-primary transition-colors">
-                        {totalCartItems} item{totalCartItems !== 1 ? 's' : ''} in cart
-                      </p>
-                      <p className="text-xs text-muted-foreground group-hover:text-primary transition-colors">
-                        Total: <span className="font-bold text-primary">${totalCartPrice.toFixed(2)}</span>
-                      </p>
-                    </div>
-                  )}
-                  <ChevronUp className="ml-2 h-5 w-5 text-primary group-hover:text-accent transition-colors" />
-                </div>
-              </SheetTrigger>
-              <SheetContent side="bottom" className="max-h-[70vh] h-auto flex flex-col rounded-t-lg p-0">
-                <SheetHeader className="p-4 border-b">
-                  <SheetTitle className="text-2xl flex items-center">
-                    <ShoppingCart className="mr-3 h-6 w-6" /> Your Order
-                  </SheetTitle>
-                </SheetHeader>
-                <ScrollArea className="flex-grow">
-                  <div className="p-4 space-y-4">
-                    {isLoadingCart ? (
-                      <div className="flex justify-center items-center py-8">
-                          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                          <p className="ml-3 text-md">Loading cart items...</p>
-                        </div>
-                    ) : cartItems.length > 0 ? (
-                      cartItems.map((cartItemEntry) => (
-                        <div key={cartItemEntry.id} className="flex items-start gap-4 p-3 border rounded-lg bg-card hover:shadow-md transition-shadow">
-                          {cartItemEntry.imageUrl ? (
-                            <Image
-                              src={cartItemEntry.imageUrl}
-                              alt={cartItemEntry.name}
-                              width={60}
-                              height={60}
-                              className="rounded-md object-cover aspect-square"
-                              data-ai-hint="food item"
-                            />
-                          ) : (
-                            <div className="h-[60px] w-[60px] bg-secondary rounded-md flex items-center justify-center text-muted-foreground">
-                              <UtensilsCrossed size={24} />
-                            </div>
-                          )}
-                          <div className="flex-1">
-                            <h4 className="font-semibold">{cartItemEntry.name}</h4>
-                            <p className="text-sm text-muted-foreground">${cartItemEntry.price.toFixed(2)} each</p>
-                            <div className="flex items-center gap-2 mt-2">
-                              <Button
-                                variant="outline"
-                                size="icon"
-                                className="h-7 w-7"
-                                onClick={() => cartItemEntry.quantity > 1 ? updateQuantity(cartItemEntry.id, cartItemEntry.quantity - 1) : removeItem(cartItemEntry.id)}
-                                aria-label="Decrease quantity"
-                                disabled={isLoadingCart}
-                              >
-                                <MinusCircle className="h-4 w-4" />
-                              </Button>
-                              <span className="w-6 text-center font-medium">{cartItemEntry.quantity}</span>
-                              <Button
-                                variant="outline"
-                                size="icon"
-                                className="h-7 w-7"
-                                onClick={() => updateQuantity(cartItemEntry.id, cartItemEntry.quantity + 1)}
-                                aria-label="Increase quantity"
-                                disabled={isLoadingCart}
-                              >
-                                <PlusCircle className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                              <p className="font-semibold">${(cartItemEntry.price * cartItemEntry.quantity).toFixed(2)}</p>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="text-muted-foreground hover:text-destructive h-7 w-7 mt-1"
-                                onClick={() => removeItem(cartItemEntry.id)}
-                                aria-label="Remove item"
-                                disabled={isLoadingCart}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                        <p className="text-muted-foreground text-center py-4">Your cart is empty.</p>
-                    )}
+      {/* Sticky Bottom Bar - Always visible */}
+      <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border shadow-lg p-4 z-50">
+        <div className="flex items-center justify-between gap-4">
+          <Sheet>
+            <SheetTrigger asChild>
+              <div className="flex-grow cursor-pointer flex items-center group">
+                {isLoadingCart ? (
+                  <div className="flex items-center">
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin text-primary" />
+                    <p className="text-md font-semibold group-hover:text-primary transition-colors">Loading cart...</p>
                   </div>
-                </ScrollArea>
-                {cartItems.length > 0 && !isLoadingCart && (
-                  <SheetFooter className="p-4 border-t bg-background">
-                    <SheetClose asChild>
-                      <Button variant="outline" onClick={clearCart} className="w-full sm:w-auto">
-                        Clear Cart
-                      </Button>
-                    </SheetClose>
-                  </SheetFooter>
+                ) : cartItems.length === 0 ? (
+                  <div>
+                    <p className="text-md font-semibold group-hover:text-primary transition-colors">
+                      Your Order
+                    </p>
+                    <p className="text-xs text-muted-foreground group-hover:text-primary transition-colors">
+                      Cart is empty
+                    </p>
+                  </div>
+                ) : (
+                  <div>
+                    <p className="text-md font-semibold group-hover:text-primary transition-colors">
+                      {totalCartItems} item{totalCartItems !== 1 ? 's' : ''} in cart
+                    </p>
+                    <p className="text-xs text-muted-foreground group-hover:text-primary transition-colors">
+                      Total: <span className="font-bold text-primary">${totalCartPrice.toFixed(2)}</span>
+                    </p>
+                  </div>
                 )}
-              </SheetContent>
-            </Sheet>
-
-            <Button 
-              onClick={handleProceedToCheckout} 
-              size="lg"
-              className="bg-accent hover:bg-accent/90 text-accent-foreground min-w-[120px]"
-              disabled={totalCartItems === 0 || isLoadingCart || isSubmittingOrder}
-            >
-              {isSubmittingOrder ? (
-                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-              ) : (
-                <CreditCard className="mr-2 h-5 w-5" />
+                <ChevronUp className="ml-2 h-5 w-5 text-primary group-hover:text-accent transition-colors" />
+              </div>
+            </SheetTrigger>
+            <SheetContent side="bottom" className="max-h-[70vh] h-auto flex flex-col rounded-t-lg p-0">
+              <SheetHeader className="p-4 border-b">
+                <SheetTitle className="text-2xl flex items-center">
+                  <ShoppingCart className="mr-3 h-6 w-6" /> Your Order
+                </SheetTitle>
+              </SheetHeader>
+              <ScrollArea className="flex-grow">
+                <div className="p-4 space-y-4">
+                  {isLoadingCart ? (
+                    <div className="flex justify-center items-center py-8">
+                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        <p className="ml-3 text-md">Loading cart items...</p>
+                      </div>
+                  ) : cartItems.length > 0 ? (
+                    cartItems.map((cartItemEntry) => (
+                      <div key={cartItemEntry.id} className="flex items-start gap-4 p-3 border rounded-lg bg-card hover:shadow-md transition-shadow">
+                        {cartItemEntry.imageUrl ? (
+                          <Image
+                            src={cartItemEntry.imageUrl}
+                            alt={cartItemEntry.name}
+                            width={60}
+                            height={60}
+                            className="rounded-md object-cover aspect-square"
+                            data-ai-hint="food item"
+                          />
+                        ) : (
+                          <div className="h-[60px] w-[60px] bg-secondary rounded-md flex items-center justify-center text-muted-foreground">
+                            <UtensilsCrossed size={24} />
+                          </div>
+                        )}
+                        <div className="flex-1">
+                          <h4 className="font-semibold">{cartItemEntry.name}</h4>
+                          <p className="text-sm text-muted-foreground">${cartItemEntry.price.toFixed(2)} each</p>
+                          <div className="flex items-center gap-2 mt-2">
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => cartItemEntry.quantity > 1 ? updateQuantity(cartItemEntry.id, cartItemEntry.quantity - 1) : removeItem(cartItemEntry.id)}
+                              aria-label="Decrease quantity"
+                              disabled={isLoadingCart}
+                            >
+                              <MinusCircle className="h-4 w-4" />
+                            </Button>
+                            <span className="w-6 text-center font-medium">{cartItemEntry.quantity}</span>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => updateQuantity(cartItemEntry.id, cartItemEntry.quantity + 1)}
+                              aria-label="Increase quantity"
+                              disabled={isLoadingCart}
+                            >
+                              <PlusCircle className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                            <p className="font-semibold">${(cartItemEntry.price * cartItemEntry.quantity).toFixed(2)}</p>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-muted-foreground hover:text-destructive h-7 w-7 mt-1"
+                              onClick={() => removeItem(cartItemEntry.id)}
+                              aria-label="Remove item"
+                              disabled={isLoadingCart}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                      <p className="text-muted-foreground text-center py-4">Your cart is empty.</p>
+                  )}
+                </div>
+              </ScrollArea>
+              {cartItems.length > 0 && !isLoadingCart && (
+                <SheetFooter className="p-4 border-t bg-background">
+                  <SheetClose asChild>
+                    <Button variant="outline" onClick={clearCart} className="w-full sm:w-auto">
+                      Clear Cart
+                    </Button>
+                  </SheetClose>
+                </SheetFooter>
               )}
-              Pay ${totalCartPrice.toFixed(2)}
-            </Button>
-          </div>
+            </SheetContent>
+          </Sheet>
+
+          <Button 
+            onClick={handleProceedToCheckout} 
+            size="lg"
+            className="bg-accent hover:bg-accent/90 text-accent-foreground min-w-[120px]"
+            disabled={totalCartItems === 0 || isLoadingCart || isSubmittingOrder}
+          >
+            {isSubmittingOrder ? (
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+            ) : (
+              <CreditCard className="mr-2 h-5 w-5" />
+            )}
+            Pay ${totalCartPrice.toFixed(2)}
+          </Button>
         </div>
-      )}
+      </div>
       
        <footer className="py-6 md:px-6 md:py-8 border-t mt-12 text-center w-full">
             <div className="text-balance text-xs leading-loose text-muted-foreground">
