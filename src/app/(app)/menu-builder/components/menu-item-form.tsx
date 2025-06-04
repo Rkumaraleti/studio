@@ -1,4 +1,3 @@
-
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -19,29 +18,51 @@ import type { MenuItem } from "@/lib/types";
 import { AiDescriptionGenerator } from "./ai-description-generator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlusCircle, Save, ChevronsUpDown, Check } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
+import { Switch } from "@/components/ui/switch";
 
 const menuItemSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   description: z.string().min(10, "Description must be at least 10 characters"),
   price: z.coerce.number().positive("Price must be a positive number"),
   category: z.string().min(1, "Category is required").trim(),
-  imageUrl: z.string().url("Must be a valid URL").optional().or(z.literal('')),
+  imageUrl: z.string().url("Must be a valid URL").optional().or(z.literal("")),
+  isAvailable: z.boolean().default(true),
 });
 
 type MenuItemFormData = z.infer<typeof menuItemSchema>;
 
 interface MenuItemFormProps {
-  onSubmit: (data: MenuItemFormData) => void;
-  initialData?: Partial<MenuItem>;
+  initialData?: MenuItem;
   isEditing?: boolean;
-  existingCategories?: string[];
+  existingCategories: string[];
+  disabled?: boolean;
+  onSubmit: (data: MenuItemFormData) => Promise<void>;
+  onCancel: () => void;
 }
 
-export function MenuItemForm({ onSubmit, initialData, isEditing = false, existingCategories = [] }: MenuItemFormProps) {
+export function MenuItemForm({
+  initialData,
+  isEditing = false,
+  existingCategories,
+  disabled = false,
+  onSubmit,
+  onCancel,
+}: MenuItemFormProps) {
   const form = useForm<MenuItemFormData>({
     resolver: zodResolver(menuItemSchema),
     defaultValues: {
@@ -50,6 +71,7 @@ export function MenuItemForm({ onSubmit, initialData, isEditing = false, existin
       price: initialData?.price || 0,
       category: initialData?.category || "",
       imageUrl: initialData?.imageUrl || "",
+      isAvailable: initialData?.isAvailable ?? true,
     },
   });
 
@@ -61,7 +83,6 @@ export function MenuItemForm({ onSubmit, initialData, isEditing = false, existin
     setCategorySearch(initialData?.category || "");
   }, [initialData?.category]);
 
-
   const currentItemName = form.watch("name");
 
   function handleFormSubmit(data: MenuItemFormData) {
@@ -72,7 +93,7 @@ export function MenuItemForm({ onSubmit, initialData, isEditing = false, existin
     }
   }
 
-  const filteredCategories = existingCategories.filter(cat =>
+  const filteredCategories = existingCategories.filter((cat) =>
     cat.toLowerCase().includes(categorySearch.toLowerCase())
   );
 
@@ -80,13 +101,20 @@ export function MenuItemForm({ onSubmit, initialData, isEditing = false, existin
     <Card className="shadow-lg">
       <CardHeader>
         <CardTitle className="text-2xl flex items-center">
-          {isEditing ? <Save className="mr-2 h-6 w-6" /> : <PlusCircle className="mr-2 h-6 w-6" />}
+          {isEditing ? (
+            <Save className="mr-2 h-6 w-6" />
+          ) : (
+            <PlusCircle className="mr-2 h-6 w-6" />
+          )}
           {isEditing ? "Edit Menu Item" : "Add New Menu Item"}
         </CardTitle>
       </CardHeader>
       <CardContent>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6">
+          <form
+            onSubmit={form.handleSubmit(handleFormSubmit)}
+            className="space-y-6"
+          >
             <FormField
               control={form.control}
               name="name"
@@ -116,7 +144,9 @@ export function MenuItemForm({ onSubmit, initialData, isEditing = false, existin
                   <FormMessage />
                   <AiDescriptionGenerator
                     itemName={currentItemName}
-                    onSuggestionAccept={(suggestion) => form.setValue("description", suggestion)}
+                    onSuggestionAccept={(suggestion) =>
+                      form.setValue("description", suggestion)
+                    }
                   />
                 </FormItem>
               )}
@@ -129,7 +159,12 @@ export function MenuItemForm({ onSubmit, initialData, isEditing = false, existin
                   <FormItem>
                     <FormLabel>Price</FormLabel>
                     <FormControl>
-                      <Input type="number" step="0.01" placeholder="e.g., 9.99" {...field} />
+                      <Input
+                        type="number"
+                        step="0.01"
+                        placeholder="e.g., 9.99"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -155,7 +190,9 @@ export function MenuItemForm({ onSubmit, initialData, isEditing = false, existin
                           >
                             {field.value
                               ? existingCategories.find(
-                                  (cat) => cat.toLowerCase() === field.value.toLowerCase()
+                                  (cat) =>
+                                    cat.toLowerCase() ===
+                                    field.value.toLowerCase()
                                 ) || field.value
                               : "Select or create category..."}
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -171,7 +208,9 @@ export function MenuItemForm({ onSubmit, initialData, isEditing = false, existin
                           />
                           <CommandList>
                             <CommandEmpty>
-                              {categorySearch.trim() === "" ? "Type to search or create." : `No category found for "${categorySearch}".`}
+                              {categorySearch.trim() === ""
+                                ? "Type to search or create."
+                                : `No category found for "${categorySearch}".`}
                             </CommandEmpty>
                             <CommandGroup>
                               {filteredCategories.map((cat) => (
@@ -187,7 +226,8 @@ export function MenuItemForm({ onSubmit, initialData, isEditing = false, existin
                                   <Check
                                     className={cn(
                                       "mr-2 h-4 w-4",
-                                      cat.toLowerCase() === field.value?.toLowerCase()
+                                      cat.toLowerCase() ===
+                                        field.value?.toLowerCase()
                                         ? "opacity-100"
                                         : "opacity-0"
                                     )}
@@ -196,19 +236,26 @@ export function MenuItemForm({ onSubmit, initialData, isEditing = false, existin
                                 </CommandItem>
                               ))}
                               {categorySearch.trim() !== "" &&
-                               !existingCategories.some(c => c.toLowerCase() === categorySearch.trim().toLowerCase()) && (
-                                <CommandItem
-                                  value={categorySearch.trim()}
-                                  onSelect={() => {
-                                    form.setValue("category", categorySearch.trim());
-                                    // setCategorySearch(categorySearch.trim()); // Keep search as is or clear
-                                    setPopoverOpen(false);
-                                  }}
-                                  className="text-primary italic"
-                                >
-                                  Create new: "{categorySearch.trim()}"
-                                </CommandItem>
-                              )}
+                                !existingCategories.some(
+                                  (c) =>
+                                    c.toLowerCase() ===
+                                    categorySearch.trim().toLowerCase()
+                                ) && (
+                                  <CommandItem
+                                    value={categorySearch.trim()}
+                                    onSelect={() => {
+                                      form.setValue(
+                                        "category",
+                                        categorySearch.trim()
+                                      );
+                                      // setCategorySearch(categorySearch.trim()); // Keep search as is or clear
+                                      setPopoverOpen(false);
+                                    }}
+                                    className="text-primary italic"
+                                  >
+                                    Create new: "{categorySearch.trim()}"
+                                  </CommandItem>
+                                )}
                             </CommandGroup>
                           </CommandList>
                         </Command>
@@ -226,16 +273,58 @@ export function MenuItemForm({ onSubmit, initialData, isEditing = false, existin
                 <FormItem>
                   <FormLabel>Image URL (Optional)</FormLabel>
                   <FormControl>
-                    <Input placeholder="https://placehold.co/600x400.png" {...field} />
+                    <Input
+                      placeholder="https://placehold.co/600x400.png"
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <Button type="submit" className="w-full md:w-auto" size="lg">
-              {isEditing ? <Save className="mr-2 h-5 w-5" /> : <PlusCircle className="mr-2 h-5 w-5" />}
-              {isEditing ? "Save Changes" : "Add Item"}
-            </Button>
+            <FormField
+              control={form.control}
+              name="isAvailable"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-base">Available</FormLabel>
+                    <div className="text-sm text-muted-foreground">
+                      Show this item on your menu
+                    </div>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            <div className="flex justify-end gap-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onCancel}
+                disabled={disabled}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                className="w-full md:w-auto"
+                size="lg"
+                disabled={disabled}
+              >
+                {isEditing ? (
+                  <Save className="mr-2 h-5 w-5" />
+                ) : (
+                  <PlusCircle className="mr-2 h-5 w-5" />
+                )}
+                {isEditing ? "Save Changes" : "Add Item"}
+              </Button>
+            </div>
           </form>
         </Form>
       </CardContent>

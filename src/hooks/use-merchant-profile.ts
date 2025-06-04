@@ -1,167 +1,172 @@
-
 // src/hooks/use-merchant-profile.ts
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import type { MerchantProfile } from '@/lib/types';
-import { useAuth } from '@/contexts/auth-context';
-import { db } from '@/lib/firebase/config';
-import { doc, getDoc, setDoc, onSnapshot, collection, serverTimestamp, updateDoc, deleteField } from 'firebase/firestore';
-import { useToast } from './use-toast';
+import { useEffect, useState, useCallback } from "react";
+import { supabase } from "@/lib/supabase/config";
+import { customAlphabet } from "nanoid";
+import { useAuth } from "@/contexts/auth-context";
 
-// Default data for a new merchant profile
-const defaultNewProfileData: Omit<MerchantProfile, 'id' | 'publicMerchantId' | 'staticMenuUrl' | 'createdAt' | 'updatedAt'> = {
-  restaurantName: "My Awesome Restaurant",
-  restaurantDescription: "Serving the best food in town!",
-  currency: "INR", // Default to INR
-  paymentGatewayConfigured: false,
-  paymentGatewayAccountId: "",
-};
+const generatePublicMerchantId = customAlphabet("abcdefghijklmnopqrstuvwxyz0123456789", 8);
 
-// Helper to generate a unique public ID
-const generatePublicMerchantId = () => {
-  const newIdPart = doc(collection(db, '_temp')).id; // Generate a new Firestore ID
-  return `m_${newIdPart.substring(0, 12)}`; // Use a portion of it
-};
+async function ensureMerchantProfile(user: any) {
+  // 1. Try to fetch the profile
+  let { data: profile, error } = await supabase
+    .from("merchant_profiles")
+    .select("*")
+    .eq("user_id", user.id)
+    .single();
+
+  // 2. If not found, create it ONCE
+  if (!profile) {
+    const public_merchant_id = generatePublicMerchantId();
+    const { data: newProfile, error: insertError } = await supabase
+      .from("merchant_profiles")
+      .insert([
+        {
+          user_id: user.id,
+          restaurant_name: user.email ? user.email.split("@")[0] : "My Restaurant",
+          public_merchant_id,
+          currency: "INR"
+        }
+      ])
+      .select()
+      .single();
+    if (insertError) throw insertError;
+    profile = newProfile;
+  }
+  return profile;
+}
 
 export function useMerchantProfile() {
   const { user, loading: authLoading } = useAuth();
-  const { toast } = useToast();
-  const [profile, setProfile] = useState<MerchantProfile | null>(null);
-  const [publicMerchantId, setPublicMerchantId] = useState<string | null>(null);
-  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
-  const [authUserId, setAuthUserId] = useState<string | null>(null);
+  const [profile, setProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (authLoading) {
-      setIsLoadingProfile(true);
-      return;
-    }
-
-    if (!user) {
-      setProfile(null);
-      setPublicMerchantId(null);
-      setAuthUserId(null);
-      setIsLoadingProfile(false);
-      return;
-    }
-
-    setAuthUserId(user.uid);
-    setIsLoadingProfile(true);
-    const profileDocRef = doc(db, 'merchants', user.uid);
-
-    const unsubscribe = onSnapshot(profileDocRef, async (docSnap) => {
-      if (docSnap.exists()) {
-        let existingData = { id: docSnap.id, ...docSnap.data() } as MerchantProfile;
-        let updatesToApply: Partial<MerchantProfile> = {};
-        let profileNeedsUpdateInDb = false;
-
-        if (!existingData.publicMerchantId) {
-          existingData.publicMerchantId = generatePublicMerchantId();
-          updatesToApply.publicMerchantId = existingData.publicMerchantId;
-          profileNeedsUpdateInDb = true;
-        }
-        
-        if (!existingData.staticMenuUrl && existingData.publicMerchantId) {
-          existingData.staticMenuUrl = typeof window !== 'undefined' ? `${window.location.origin}/menu/${existingData.publicMerchantId}` : `/menu/${existingData.publicMerchantId}`;
-          updatesToApply.staticMenuUrl = existingData.staticMenuUrl;
-          profileNeedsUpdateInDb = true;
-        }
-        
-        if (profileNeedsUpdateInDb) {
-          updatesToApply.updatedAt = serverTimestamp();
-          try {
-            await updateDoc(profileDocRef, updatesToApply);
-          } catch (error) {
-            console.error("Error auto-updating profile with IDs/URL:", error);
-          }
-          // Data will be re-fetched by onSnapshot after update, or use merged for immediate UI
-        }
-        setProfile({...existingData, ...updatesToApply}); // Use merged for immediate UI update
-        setPublicMerchantId(existingData.publicMerchantId || updatesToApply.publicMerchantId || null);
-
-      } else {
-        // Profile doesn't exist, create a new one
-        const newPublicId = generatePublicMerchantId();
-        const newStaticMenuUrl = typeof window !== 'undefined' ? `${window.location.origin}/menu/${newPublicId}` : `/menu/${newPublicId}`;
-        
-        const newProfileData: Omit<MerchantProfile, 'id' | 'createdAt' | 'updatedAt'> = {
-          ...defaultNewProfileData, // Contains default currency INR
-          publicMerchantId: newPublicId,
-          staticMenuUrl: newStaticMenuUrl,
-        };
-        try {
-          await setDoc(profileDocRef, { 
-            ...newProfileData, 
-            createdAt: serverTimestamp(), 
-            updatedAt: serverTimestamp() 
-          });
-          // onSnapshot will subsequently update 'profile' state from Firestore
-          // For immediate UI, we could set it here, but onSnapshot is more robust
-        } catch (error) {
-          console.error("Error creating new merchant profile:", error);
-          toast({ title: "Profile Creation Failed", description: "Could not set up your merchant profile.", variant: "destructive" });
-        }
+    async function fetchOrCreateProfile() {
+      setLoading(true);
+      setError(null);
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError) {
+        setError(userError.message);
+        setLoading(false);
+        return;
       }
-      setIsLoadingProfile(false);
-    }, (error) => {
-      console.error("Error fetching merchant profile:", error);
-      toast({ title: "Profile Error", description: "Could not load your merchant profile.", variant: "destructive" });
-      setIsLoadingProfile(false);
-    });
-
-    return () => unsubscribe();
-
-  }, [user, authLoading, toast]);
-
-  const updateProfile = useCallback(async (updatedProfileData: Partial<Omit<MerchantProfile, 'id' | 'publicMerchantId' | 'staticMenuUrl' | 'createdAt'>>) => {
-    if (!user) {
-      console.error("User not authenticated, cannot update profile.");
-      throw new Error("User not authenticated");
+      if (!user) {
+        setError("Not authenticated");
+        setLoading(false);
+        return;
+      }
+      try {
+        const profile = await ensureMerchantProfile(user);
+        setProfile(profile);
+      } catch (err: any) {
+        setError(err.message || "Failed to fetch or create profile");
+        setProfile(null);
+      }
+      setLoading(false);
     }
-    
-    const profileDocRef = doc(db, 'merchants', user.uid);
+    fetchOrCreateProfile();
+  }, []);
+
+  const createProfile = useCallback(async (restaurantName: string) => {
+    if (!user) throw new Error("Not authenticated");
+    setLoading(true);
+    setError(null);
     try {
-      // Ensure restaurantDescription is handled correctly (e.g., using deleteField if empty)
-      const dataToUpdate = { ...updatedProfileData, updatedAt: serverTimestamp() } as any;
-      if (updatedProfileData.restaurantDescription === '') {
-        dataToUpdate.restaurantDescription = deleteField();
-      } else if (updatedProfileData.restaurantDescription === undefined) {
-        // If explicitly undefined, it might be intended to remove or might be an oversight.
-        // For safety, let's assume if it's undefined in the partial, we don't touch it unless it's explicitly deleteField()
-        delete dataToUpdate.restaurantDescription; 
+      // Only create if not exists
+      let { data: profile } = await supabase
+        .from("merchant_profiles")
+        .select("*")
+        .eq("user_id", user.id)
+        .single();
+      if (!profile) {
+        const public_merchant_id = generatePublicMerchantId();
+        const { data, error } = await supabase
+          .from("merchant_profiles")
+          .insert([{
+            user_id: user.id,
+            restaurant_name: restaurantName,
+            public_merchant_id,
+            currency: "INR"
+          }])
+          .select()
+          .single();
+        if (error) throw error;
+        setProfile(data);
+        return data;
+      } else {
+        setProfile(profile);
+        return profile;
       }
-
-
-      await updateDoc(profileDocRef, dataToUpdate);
-    } catch (error) {
-      console.error("Error updating merchant profile:", error);
-      throw error;
+    } catch (err: any) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setLoading(false);
     }
   }, [user]);
 
-  const regenerateAndSaveStaticMenuUrl = useCallback(async () => {
-    if (!user || !publicMerchantId) {
-      toast({ title: "Error", description: "User or profile ID missing.", variant: "destructive" });
-      return;
+  const updateProfile = useCallback(async (updates: any) => {
+    if (!user) throw new Error("Not authenticated");
+    if (!updates || Object.keys(updates).length === 0) {
+      throw new Error("No updates provided");
     }
-    const newStaticMenuUrl = typeof window !== 'undefined' ? `${window.location.origin}/menu/${publicMerchantId}` : `/menu/${publicMerchantId}`; 
+
+    setLoading(true);
+    setError(null);
     try {
-      const profileDocRef = doc(db, 'merchants', user.uid);
-      await updateDoc(profileDocRef, { staticMenuUrl: newStaticMenuUrl, updatedAt: serverTimestamp() });
-      toast({ title: "Menu URL Updated", description: "The QR code will now reflect the new URL." });
-    } catch (error) {
-      console.error("Error regenerating static menu URL:", error);
-      toast({ title: "Update Failed", description: "Could not update the menu URL.", variant: "destructive" });
+      // Transform camelCase to snake_case for database
+      const transformedUpdates = {
+        ...(updates.restaurantName && { restaurant_name: updates.restaurantName }),
+        ...(updates.restaurantDescription && { description: updates.restaurantDescription }),
+        ...(updates.currency && { currency: updates.currency }),
+        ...(updates.paymentGatewayConfigured !== undefined && { 
+          payment_gateway_configured: updates.paymentGatewayConfigured 
+        }),
+        ...(updates.paymentGatewayAccountId && { 
+          payment_gateway_account_id: updates.paymentGatewayAccountId 
+        })
+      };
+
+      const { data, error } = await supabase
+        .from("merchant_profiles")
+        .update(transformedUpdates)
+        .eq("user_id", user.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Update the local state with the new data
+      setProfile(prevProfile => ({
+        ...prevProfile,
+        ...transformedUpdates
+      }));
+
+      return data;
+    } catch (err: any) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setLoading(false);
     }
-  }, [user, publicMerchantId, toast]);
+  }, [user, profile]);
+
+  // Generate the public menu URL on the fly
+  const publicMenuUrl = profile?.public_merchant_id
+    ? `${typeof window !== 'undefined' ? window.location.origin : ''}/menu/${profile.public_merchant_id}`
+    : null;
 
   return {
     profile,
-    isLoadingProfile: isLoadingProfile || authLoading,
+    loading: loading || authLoading,
+    error,
+    fetchProfile: ensureMerchantProfile,
+    createProfile,
     updateProfile,
-    authUserId,
-    publicMerchantId,
-    regenerateAndSaveStaticMenuUrl,
+    publicMerchantId: profile?.public_merchant_id,
+    publicMenuUrl
   };
 }

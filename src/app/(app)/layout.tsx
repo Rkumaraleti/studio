@@ -1,7 +1,7 @@
 // src/app/(app)/layout.tsx
-"use client"
+"use client";
 
-import Link from "next/link"
+import Link from "next/link";
 import {
   LayoutDashboard,
   ClipboardList,
@@ -10,7 +10,7 @@ import {
   Settings,
   PanelLeft,
   ShoppingBag,
-} from "lucide-react"
+} from "lucide-react";
 
 import {
   SidebarProvider,
@@ -24,15 +24,15 @@ import {
   SidebarInset,
   SidebarTrigger,
   useSidebar,
-} from "@/components/ui/sidebar"
-import { AppLogo } from "@/components/common/app-logo"
-import { UserNav } from "@/components/common/user-nav"
-import { Button } from "@/components/ui/button"
-import { usePathname, useRouter } from "next/navigation"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { useAuth } from "@/contexts/auth-context"
-import { useEffect } from "react"
-import { Loader2 } from "lucide-react"
+} from "@/components/ui/sidebar";
+import { AppLogo } from "@/components/common/app-logo";
+import { UserNav } from "@/components/common/user-nav";
+import { Button } from "@/components/ui/button";
+import { usePathname, useRouter } from "next/navigation";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { useAuth } from "@/contexts/auth-context";
+import { useEffect } from "react";
+import { Loader2 } from "lucide-react";
 
 const navItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
@@ -40,7 +40,7 @@ const navItems = [
   { href: "/orders", icon: ShoppingBag, label: "Orders" },
   { href: "/qr-code", icon: QrCodeIcon, label: "QR Code" },
   { href: "/profile", icon: UserCircle, label: "Profile" },
-]
+];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -60,20 +60,29 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </div>
     );
   }
-  
+
   if (!user) {
-    return null; 
+    return null;
   }
 
   return (
     <SidebarProvider defaultOpen>
-      <div className="flex h-full">
-        <Sidebar className="border-r" collapsible="icon">
-          <SidebarHeader>
-            <Link href="/dashboard" className="block group-data-[collapsible=icon]:hidden">
+      <div className="flex h-full bg-gradient-to-br from-background to-background/95">
+        <Sidebar
+          className="border-r bg-background/50 backdrop-blur-sm hidden md:block"
+          collapsible="icon"
+        >
+          <SidebarHeader className="border-b border-border/40">
+            <Link
+              href="/dashboard"
+              className="block group-data-[collapsible=icon]:hidden"
+            >
               <AppLogo />
             </Link>
-             <Link href="/dashboard" className="hidden group-data-[collapsible=icon]:block">
+            <Link
+              href="/dashboard"
+              className="hidden group-data-[collapsible=icon]:block"
+            >
               <AppLogo showText={false} />
             </Link>
           </SidebarHeader>
@@ -88,8 +97,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                       tooltip={{ children: item.label, side: "right" }}
                     >
                       <Link href={item.href}>
-                        <item.icon />
-                        <span>{item.label}</span>
+                        <item.icon className="h-5 w-5" />
+                        <span className="responsive-text">{item.label}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -97,13 +106,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               </SidebarMenu>
             </ScrollArea>
           </SidebarContent>
-          <SidebarFooter>
+          <SidebarFooter className="border-t border-border/40">
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip={{ children: "Settings", side: "right" }} disabled>
+                <SidebarMenuButton
+                  asChild
+                  tooltip={{ children: "Settings", side: "right" }}
+                  disabled
+                >
                   <Link href="#">
-                    <Settings />
-                    <span>Settings</span>
+                    <Settings className="h-5 w-5" />
+                    <span className="responsive-text">Settings</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -111,19 +124,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </SidebarFooter>
         </Sidebar>
         <SidebarInset className="flex-1 flex flex-col">
-          <header className="sticky top-0 z-10 flex h-14 items-center justify-between gap-4 border-b bg-background/80 backdrop-blur-sm px-4 md:px-6">
+          <header className="sticky top-0 z-10 flex h-16 items-center justify-between gap-4 border-b bg-background/80 backdrop-blur-sm px-4 md:px-6">
             <MobileSidebarToggle />
             <div className="ml-auto">
               <UserNav />
             </div>
           </header>
-          <main className="flex-1 overflow-y-auto"> {/* Removed padding here */}
-            {children}
+          <main className="flex-1 overflow-y-auto responsive-padding">
+            <div className="responsive-container space-y-6">{children}</div>
           </main>
         </SidebarInset>
       </div>
     </SidebarProvider>
-  )
+  );
 }
 
 function MobileSidebarToggle() {

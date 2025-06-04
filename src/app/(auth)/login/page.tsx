@@ -1,137 +1,70 @@
 // src/app/(auth)/login/page.tsx
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { Button } from "@/components/ui/button";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { LogIn, Loader2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "@/lib/firebase/config";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { useState } from "react";
-
-const loginSchema = z.object({
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-});
-
-type LoginFormValues = z.infer<typeof loginSchema>;
+import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase/config";
 
 export default function LoginPage() {
-  const { toast } = useToast();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const form = useForm<LoginFormValues>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-    },
-  });
-
-  async function onSubmit(data: LoginFormValues) {
-    setIsSubmitting(true);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, data.email, data.password);
-      toast({
-        title: "Login Successful",
-        description: "Welcome back!",
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
-      router.push("/dashboard"); // Redirect to dashboard or desired page
-    } catch (error: any) {
-      console.error("Login error:", error);
-      let errorMessage = "An unexpected error occurred. Please try again.";
-      
-      if (error.code === 'auth/user-not-found' || 
-          error.code === 'auth/wrong-password' || 
-          error.code === 'auth/invalid-credential') {
-        errorMessage = "Invalid email or password. Please try again.";
-      } else if (error.code === 'auth/invalid-email') {
-        errorMessage = "The email address is not valid.";
-      } else if (error.code === 'auth/user-disabled') {
-        errorMessage = "This account has been disabled. Please contact support.";
-      }
-      // For other Firebase errors, the generic message will be used.
-
-      toast({
-        title: "Login Failed",
-        description: errorMessage,
-        variant: "destructive",
-      });
+      if (signInError) throw signInError;
+      router.push("/dashboard");
+    } catch (err: any) {
+      setError(err.message || "Failed to sign in");
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
-  }
+  };
 
   return (
-    <Card className="shadow-xl">
-      <CardHeader>
-        <CardTitle className="text-2xl flex items-center">
-          <LogIn className="mr-2 h-6 w-6" />
-          Login to QR Plus
-        </CardTitle>
-        <CardDescription>
-          Enter your credentials to access your merchant dashboard.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <FormControl>
-                    <Input type="email" placeholder="you@example.com" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Password</FormLabel>
-                  <FormControl>
-                    <Input type="password" placeholder="••••••••" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <Button type="submit" className="w-full" size="lg" disabled={isSubmitting}>
-              {isSubmitting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <LogIn className="mr-2 h-5 w-5" />}
-              Login
-            </Button>
-          </form>
-        </Form>
-      </CardContent>
-      <CardFooter className="flex flex-col items-center text-sm">
-        <p className="text-muted-foreground">
-          Don&apos;t have an account?{" "}
-          <Button variant="link" asChild className="p-0 h-auto">
-            <Link href="/signup">Sign up</Link>
-          </Button>
+    <div className="container flex items-center justify-center min-h-screen py-12">
+      <form onSubmit={handleSubmit} className="space-y-4 w-full max-w-md">
+        <h1 className="text-2xl font-bold">Login</h1>
+        {error && <div className="text-red-500">{error}</div>}
+        <input
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+          className="w-full border p-2 rounded"
+        />
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+          className="w-full border p-2 rounded"
+        />
+        <button
+          type="submit"
+          className="w-full bg-blue-600 text-white p-2 rounded"
+          disabled={loading}
+        >
+          {loading ? "Logging in..." : "Login"}
+        </button>
+        <p className="text-center text-sm">
+          Don't have an account?{" "}
+          <a href="/signup" className="text-blue-600 underline">
+            Sign Up
+          </a>
         </p>
-      </CardFooter>
-    </Card>
+      </form>
+    </div>
   );
 }
