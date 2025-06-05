@@ -64,7 +64,7 @@ export function useOrders() {
     try {
       const { data, error } = await supabase
         .from("orders")
-        .select("*, display_order_id")
+        .select("*")
         .eq("public_merchant_id", profile.public_merchant_id)
         .order("created_at", { ascending: false });
 
@@ -73,8 +73,14 @@ export function useOrders() {
         setError(error.message);
         setOrders([]);
       } else {
-        console.log("[useOrders] Fetched orders:", data);
-        setOrders(data || []);
+        // Process orders to ensure items and total are properly handled
+        const processedOrders = (data || []).map(order => ({
+          ...order,
+          items: Array.isArray(order.items) ? order.items : [],
+          total: order.total || order.items.reduce((sum: number, item: any) => sum + (item.price * (item.quantity || 1)), 0)
+        }));
+        console.log("[useOrders] Fetched orders:", processedOrders);
+        setOrders(processedOrders);
       }
     } catch (err: any) {
       console.error("[useOrders] Unexpected error:", err);

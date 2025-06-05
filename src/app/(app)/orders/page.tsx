@@ -122,7 +122,8 @@ function OrderCard({
   const cancelOpacity = useTransform(x, [-100, 0], [1, 0]);
   const StatusIcon = statusInfo.icon;
   const totalAmount = order.items.reduce(
-    (sum: number, item: { price: number }) => sum + item.price,
+    (sum: number, item: { price: number; quantity?: number }) =>
+      sum + item.price * (item.quantity || 1),
     0
   );
 
@@ -246,9 +247,14 @@ function OrderCard({
                     key={index}
                     className="flex justify-between items-center text-sm"
                   >
-                    <span className="font-medium">{item.name}</span>
+                    <span className="font-medium">
+                      {item.name} {item.quantity > 1 ? `x${item.quantity}` : ""}
+                    </span>
                     <span className="text-muted-foreground">
-                      {formatPrice(item.price, currentCurrencyCode)}
+                      {formatPrice(
+                        item.price * (item.quantity || 1),
+                        currentCurrencyCode
+                      )}
                     </span>
                   </div>
                 ))}
