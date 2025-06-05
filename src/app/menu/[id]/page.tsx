@@ -35,6 +35,7 @@ import { useSupabaseAnonymousAuth } from "@/hooks/use-supabase-anonymous-auth";
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
 import { Clock } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -80,6 +81,7 @@ export default function PublicMenuPage({ params }: PageProps) {
   const { user, loading: authLoading } = useSupabaseAnonymousAuth();
   const [orderHistory, setOrderHistory] = useState<any[]>([]);
   const [orderHistoryLoading, setOrderHistoryLoading] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     async function fetchProfile() {
@@ -166,49 +168,23 @@ export default function PublicMenuPage({ params }: PageProps) {
                   : "Order Cancelled",
               description:
                 newStatus.status === "confirmed"
-                  ? "Your order has been confirmed. The menu will close shortly."
-                  : "Your order has been cancelled. Please contact the merchant for more information.",
+                  ? "Your order has been confirmed. Redirecting to order history..."
+                  : "Your order has been cancelled. Redirecting to order history...",
             });
 
-            // Close menu if confirmed
-            if (newStatus.status === "confirmed") {
-              console.log("[Realtime] Order confirmed, closing menu.");
-              setShowMenu(false);
-
-              // Attempt to close the window after 10 seconds
-              if (typeof window !== "undefined") {
-                setTimeout(() => {
-                  console.log("Attempting to close window.");
-                  window.close();
-                }, 10000); // 10 seconds
-              }
-            }
-
-            // Close dialog after a delay
+            // Redirect to order history after a short delay
             setTimeout(() => {
-              console.log("[Realtime] Closing dialog after timeout.");
-              setOrderStatus(null);
-            }, 5000);
-          } else {
-            console.log(
-              "[Realtime] Payload does not contain a confirmed or cancelled status. No state update triggered."
-            );
-            console.log(
-              "[Realtime] Current orderStatus state remains:",
-              orderStatus
-            );
+              router.push(`/menu/${id}/order-history`);
+            }, 2000);
           }
         }
       )
       .subscribe();
 
-    console.log("[Realtime] Subscribed to order:", orderStatus.id);
-
     return () => {
-      console.log("[Realtime] Unsubscribing from order:", orderStatus.id);
       supabase.removeChannel(channel);
     };
-  }, [orderStatus?.id, toast, setShowMenu]);
+  }, [orderStatus?.id, toast, router, id]);
 
   // Fetch order history for this user and merchant
   useEffect(() => {

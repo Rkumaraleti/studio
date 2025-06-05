@@ -42,6 +42,7 @@ import type {
   TouchEvent as ReactTouchEvent,
   PointerEvent as ReactPointerEvent,
 } from "react";
+import { useRouter } from "next/navigation";
 
 const orderStatusMap: Record<
   OrderStatus | "paid",
@@ -340,6 +341,7 @@ export default function OrdersPage() {
   const [isMobile, setIsMobile] = useState(false);
   const [draggedOrderStatus, setDraggedOrderStatus] =
     useState<OrderStatus | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     const checkMobile = () => {
@@ -358,22 +360,34 @@ export default function OrdersPage() {
       let updateData: any = { status: newStatus };
       if (newStatus === "cancelled") {
         updateData.cancelled_at = new Date().toISOString();
+        await updateOrder(orderId, updateData);
+        toast({
+          title: "Order Cancelled",
+          description: "You can restore this order within 5 seconds.",
+          duration: 5000,
+        });
       } else if (newStatus === "pending") {
         updateData.cancelled_at = null;
+        await updateOrder(orderId, updateData);
+        toast({
+          title: "Order Restored",
+          description: "The order has been restored to pending status.",
+        });
+      } else {
+        await updateOrder(orderId, updateData);
+        toast({
+          title: "Order Status Updated",
+          description: `Order #${orderId.substring(
+            0,
+            8
+          )}... is now ${newStatus}.`,
+        });
       }
-      await updateOrder(orderId, updateData);
-      toast({
-        title: "Order Status Updated",
-        description: `Order #${orderId.substring(
-          0,
-          8
-        )}... is now ${newStatus}.`,
-      });
     } catch (error) {
       console.error("Error updating order status:", error);
       toast({
-        title: "Update Error",
-        description: "Could not update order status.",
+        title: "Error",
+        description: "Failed to update order status. Please try again.",
         variant: "destructive",
       });
     }
@@ -421,6 +435,25 @@ export default function OrdersPage() {
   const handleDragEnd = () => {
     setDraggedOrderId(null);
     setDraggedOrderStatus(null);
+  };
+
+  const handleConfirmOrder = async (orderId: string) => {
+    try {
+      await handleStatusChange(orderId, "confirmed");
+      toast({
+        title: "Order Confirmed",
+        description: "The order has been confirmed successfully.",
+      });
+      // Redirect to order history page instead of closing
+      router.push(`/menu/${profile?.public_merchant_id}/order-history`);
+    } catch (error) {
+      console.error("Error confirming order:", error);
+      toast({
+        title: "Error",
+        description: "Failed to confirm the order. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   if (authLoading || profileLoading || isLoadingOrders) {

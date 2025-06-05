@@ -61,6 +61,15 @@ export default function OrderHistoryPage() {
                   : order
               )
             );
+
+            // If order is cancelled or confirmed, redirect to order history
+            if (
+              updatedOrder.status === "cancelled" ||
+              updatedOrder.status === "confirmed"
+            ) {
+              // Already on order history page, just refresh the list
+              router.refresh();
+            }
           }
         }
       )
@@ -68,7 +77,7 @@ export default function OrderHistoryPage() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.id, id]);
+  }, [user?.id, id, router]);
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
