@@ -1,13 +1,17 @@
+"use client";
+
 import type { Metadata, Viewport } from "next";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/contexts/auth-context"; // Import AuthProvider
+import { useEffect } from "react";
 
 export const metadata: Metadata = {
   title: "QR Plus - Digital Menus Made Easy",
   description: "Create, customize, and share your digital menu with QR Plus.",
+  manifest: "/manifest.json",
 };
 
 export const viewport: Viewport = {
@@ -19,11 +23,33 @@ export const viewport: Viewport = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
+  useEffect(() => {
+    if (typeof window !== "undefined" && "serviceWorker" in navigator) {
+      // Register service worker
+      navigator.serviceWorker
+        .register("/sw.js")
+        .then((registration) => {
+          console.log(
+            "Service Worker registered with scope:",
+            registration.scope
+          );
+        })
+        .catch((error) => {
+          console.error("Service Worker registration failed:", error);
+        });
+    }
+  }, []);
+
   return (
-    <html lang="en" className="h-full">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#000000" />
+        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+      </head>
       <body
         className={`${GeistSans.variable} ${GeistMono.variable} font-sans antialiased h-full flex flex-col overflow-x-hidden`}
       >
