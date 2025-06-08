@@ -502,11 +502,21 @@ export default function PublicMenuPage({ params }: PageProps) {
       {/* Cart Footer */}
       <footer className="fixed bottom-0 left-0 w-full bg-background border-t z-50">
         <div className="container mx-auto max-w-5xl px-4 py-3">
-          <div className="flex justify-between items-center">
+          <div className="w-full mb-2">
+            <div className="flex flex-row justify-between items-baseline w-full px-2 py-2 rounded bg-muted/60">
+              <span className="text-sm text-muted-foreground">
+                Total Amount:
+              </span>
+              <span className="text-xl font-bold">
+                ₹{getTotalPrice().toFixed(2)}
+              </span>
+            </div>
+          </div>
+          <div className="flex flex-row items-end justify-between gap-2">
             <Button
               variant="outline"
               size="lg"
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 w-full sm:w-auto"
               disabled={getTotalItems() === 0}
               onClick={() => setShowCart(true)}
             >
@@ -518,15 +528,10 @@ export default function PublicMenuPage({ params }: PageProps) {
                 </Badge>
               )}
             </Button>
-            <div className="flex items-center gap-4">
-              <div className="text-right">
-                <p className="text-sm text-muted-foreground">Total Amount</p>
-                <p className="text-xl font-bold">
-                  ₹{getTotalPrice().toFixed(2)}
-                </p>
-              </div>
+            <div className="flex flex-col items-end w-full sm:w-auto max-w-xs">
               <Button
                 size="lg"
+                className="w-full sm:w-auto"
                 disabled={getTotalItems() === 0 || isSubmitting}
                 onClick={handlePayment}
               >

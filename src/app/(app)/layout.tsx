@@ -77,13 +77,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               href="/dashboard"
               className="block group-data-[collapsible=icon]:hidden"
             >
-              <AppLogo />
+              <AppLogo size={40} className="text-2xl font-bold" />
             </Link>
             <Link
               href="/dashboard"
               className="hidden group-data-[collapsible=icon]:block"
             >
-              <AppLogo showText={false} />
+              <AppLogo size={40} showText={false} />
             </Link>
           </SidebarHeader>
           <SidebarContent>

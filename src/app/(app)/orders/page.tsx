@@ -342,10 +342,17 @@ export default function OrdersPage() {
   const [draggedOrderStatus, setDraggedOrderStatus] =
     useState<OrderStatus | null>(null);
   const router = useRouter();
+  const [isMobileStack, setIsMobileStack] = useState(false);
+
+  // Deck view toggles
+  const [showAllPending, setShowAllPending] = useState(false);
+  const [showAllNonPending, setShowAllNonPending] = useState(false);
+  const DECK_VISIBLE = 3; // Number of cards visible in deck mode
 
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth <= 768);
+      setIsMobileStack(window.innerWidth <= 768);
     };
     checkMobile();
     window.addEventListener("resize", checkMobile);
@@ -456,6 +463,10 @@ export default function OrdersPage() {
     }
   };
 
+  // Split orders into pending and non-pending
+  const pendingOrders = orders.filter((o) => o.status === "pending");
+  const nonPendingOrders = orders.filter((o) => o.status !== "pending");
+
   if (authLoading || profileLoading || isLoadingOrders) {
     return (
       <div className="responsive-container min-h-[calc(100vh-4rem)] flex items-center justify-center">
@@ -533,6 +544,170 @@ export default function OrdersPage() {
             When customers place orders through your QR menu, they will appear
             here.
           </p>
+        </div>
+      ) : isMobileStack ? (
+        <div className="relative w-full max-w-[420px] mx-auto">
+          {/* Pending Orders Stack */}
+          <div>
+            <h2 className="font-semibold text-lg mb-2">Pending Orders</h2>
+            <div className="relative min-h-[180px]">
+              {(showAllPending
+                ? pendingOrders
+                : pendingOrders.slice(0, DECK_VISIBLE)
+              ).map((order, idx) => {
+                const isTop = idx === 0;
+                const offset = idx * 12;
+                const scale = 1 - idx * 0.04;
+                const z = pendingOrders.length - idx;
+                const statusInfo = orderStatusMap[
+                  order.status as OrderStatus | "paid"
+                ] || {
+                  label: order.status,
+                  icon: Info,
+                  color: "bg-gray-500",
+                  textColor: "text-gray-50",
+                };
+                return (
+                  <div
+                    key={order.id}
+                    className="absolute left-0 right-0"
+                    style={{
+                      top: `${offset}px`,
+                      zIndex: z,
+                      pointerEvents: isTop ? "auto" : "none",
+                      opacity: isTop ? 1 : 0.85,
+                      transform: `scale(${scale})`,
+                      transition: "top 0.3s, transform 0.3s, opacity 0.3s",
+                    }}
+                  >
+                    <OrderCard
+                      order={order}
+                      statusInfo={statusInfo}
+                      currentCurrencyCode={currentCurrencyCode}
+                      getRelativeTime={getRelativeTime}
+                      handleStatusChange={handleStatusChange}
+                      draggedOrderId={draggedOrderId}
+                      setDraggedOrderId={setDraggedOrderId}
+                      handleDrag={handleDrag}
+                      isMobile={isMobile}
+                      onDragStart={() => handleDragStart(order)}
+                      onDragEnd={handleDragEnd}
+                    />
+                  </div>
+                );
+              })}
+              {pendingOrders.length > DECK_VISIBLE && !showAllPending && (
+                <button
+                  className="block mx-auto mt-[48px] text-primary underline text-sm"
+                  onClick={() => setShowAllPending(true)}
+                >
+                  View More
+                </button>
+              )}
+              {showAllPending && pendingOrders.length > DECK_VISIBLE && (
+                <button
+                  className="block mx-auto mt-2 text-primary underline text-sm"
+                  onClick={() => setShowAllPending(false)}
+                >
+                  View Less
+                </button>
+              )}
+            </div>
+          </div>
+          {/* Orders (non-pending) Stack */}
+          <div>
+            <h2 className="font-semibold text-lg mb-2">Orders</h2>
+            {showAllNonPending ? (
+              <div className="flex flex-col gap-4">
+                {nonPendingOrders.map((order) => {
+                  const statusInfo = orderStatusMap[
+                    order.status as OrderStatus | "paid"
+                  ] || {
+                    label: order.status,
+                    icon: Info,
+                    color: "bg-gray-500",
+                    textColor: "text-gray-50",
+                  };
+                  return (
+                    <OrderCard
+                      key={order.id}
+                      order={order}
+                      statusInfo={statusInfo}
+                      currentCurrencyCode={currentCurrencyCode}
+                      getRelativeTime={getRelativeTime}
+                      handleStatusChange={handleStatusChange}
+                      draggedOrderId={draggedOrderId}
+                      setDraggedOrderId={setDraggedOrderId}
+                      handleDrag={handleDrag}
+                      isMobile={isMobile}
+                      onDragStart={() => handleDragStart(order)}
+                      onDragEnd={handleDragEnd}
+                    />
+                  );
+                })}
+                <button
+                  className="block mx-auto mt-2 text-primary underline text-sm"
+                  onClick={() => setShowAllNonPending(false)}
+                >
+                  View Less
+                </button>
+              </div>
+            ) : (
+              <div className="relative min-h-[180px]">
+                {nonPendingOrders.slice(0, DECK_VISIBLE).map((order, idx) => {
+                  const isTop = idx === 0;
+                  const offset = idx * 12;
+                  const scale = 1 - idx * 0.04;
+                  const z = nonPendingOrders.length - idx;
+                  const statusInfo = orderStatusMap[
+                    order.status as OrderStatus | "paid"
+                  ] || {
+                    label: order.status,
+                    icon: Info,
+                    color: "bg-gray-500",
+                    textColor: "text-gray-50",
+                  };
+                  return (
+                    <div
+                      key={order.id}
+                      className="absolute left-0 right-0"
+                      style={{
+                        top: `${offset}px`,
+                        zIndex: z,
+                        pointerEvents: isTop ? "auto" : "none",
+                        opacity: isTop ? 1 : 0.85,
+                        transform: `scale(${scale})`,
+                        transition: "top 0.3s, transform 0.3s, opacity 0.3s",
+                      }}
+                    >
+                      <OrderCard
+                        order={order}
+                        statusInfo={statusInfo}
+                        currentCurrencyCode={currentCurrencyCode}
+                        getRelativeTime={getRelativeTime}
+                        handleStatusChange={handleStatusChange}
+                        draggedOrderId={draggedOrderId}
+                        setDraggedOrderId={setDraggedOrderId}
+                        handleDrag={handleDrag}
+                        isMobile={isMobile}
+                        onDragStart={() => handleDragStart(order)}
+                        onDragEnd={handleDragEnd}
+                      />
+                    </div>
+                  );
+                })}
+                {nonPendingOrders.length > DECK_VISIBLE &&
+                  !showAllNonPending && (
+                    <button
+                      className="block mx-auto mt-[48px] text-primary underline text-sm"
+                      onClick={() => setShowAllNonPending(true)}
+                    >
+                      View More
+                    </button>
+                  )}
+              </div>
+            )}
+          </div>
         </div>
       ) : (
         <div className="grid gap-6 grid-cols-1">

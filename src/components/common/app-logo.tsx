@@ -1,17 +1,28 @@
-import type { SVGProps } from 'react';
-import { QrCode } from 'lucide-react';
+import Image from "next/image";
 
-interface AppLogoProps extends SVGProps<SVGSVGElement> {
+interface AppLogoProps {
   size?: number;
   showText?: boolean;
+  className?: string;
 }
 
-export function AppLogo({ size = 24, showText = true, className, ...props }: AppLogoProps) {
+export function AppLogo({
+  size = 35,
+  showText = true,
+  className,
+}: AppLogoProps) {
   return (
-    <div className="flex items-center gap-2">
-      <QrCode className={className} size={size} color="hsl(var(--primary))" {...props} />
+    <div className="flex items-center gap-3">
+      <Image
+        src="/qrplus_logo.png"
+        alt="QR Plus Logo"
+        width={size}
+        height={size}
+        className=""
+        priority
+      />
       {showText && (
-        <span className="font-semibold text-lg text-primary">
+        <span className={`font-bold text-2xl text-primary ${className || ""}`}>
           QR Plus
         </span>
       )}

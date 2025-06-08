@@ -6,6 +6,7 @@ import { MenuDisplayItem } from "./menu-display-item";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface MenuDisplayProps {
   public_merchant_id: string;
@@ -33,26 +34,25 @@ export function MenuDisplay({
   restaurantDescription,
 }: MenuDisplayProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeCategory, setActiveCategory] = useState<string>("All");
 
   // Group items by category
   const categories = groupByCategory(menuItems);
+  const allCategories = [
+    "All",
+    ...Object.keys(categories).filter((c) => c !== "Uncategorized"),
+  ];
 
-  // Filter items by search
-  const filteredCategories = Object.entries(categories).reduce(
-    (acc, [category, items]) => {
-      const filtered = items.filter(
-        (item) =>
-          item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          item.description.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-      if (filtered.length > 0) acc[category] = filtered;
-      return acc;
-    },
-    {} as { [key: string]: MenuItem[] }
+  // Filter items by search and category
+  const filteredItems = menuItems.filter(
+    (item) =>
+      (activeCategory === "All" || item.category?.trim() === activeCategory) &&
+      (item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.description.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Search Bar */}
       <div className="relative mb-2">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -60,38 +60,44 @@ export function MenuDisplay({
           placeholder="Search menu items..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-9"
+          className="pl-9 rounded-full bg-muted"
         />
       </div>
-
-      {/* Category Carousels */}
-      {Object.keys(filteredCategories).length === 0 ? (
+      {/* Category Tabs */}
+      <Tabs
+        value={activeCategory}
+        onValueChange={setActiveCategory}
+        className="w-full mb-4"
+      >
+        <TabsList className="flex gap-2 overflow-x-auto rounded-full bg-background/80 p-1">
+          {allCategories.map((cat) => (
+            <TabsTrigger
+              key={cat}
+              value={cat}
+              className="px-4 py-2 rounded-full text-base font-medium data-[state=active]:bg-primary data-[state=active]:text-white transition-colors whitespace-nowrap"
+            >
+              {cat}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
+      {/* Menu Items Grid */}
+      {filteredItems.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <p className="text-muted-foreground">No items found</p>
           </CardContent>
         </Card>
       ) : (
-        Object.entries(filteredCategories).map(([category, items]) => (
-          <section key={category} className="space-y-4">
-            <h2 className="text-xl font-bold tracking-tight px-1 sticky top-0 bg-background z-10 pb-1">
-              {category}
-            </h2>
-            <div
-              className="flex gap-4 overflow-x-auto pb-2 px-1 snap-x snap-mandatory"
-              style={{ WebkitOverflowScrolling: "touch" }}
-            >
-              {items.map((item) => (
-                <div
-                  key={item.id}
-                  className="min-w-[260px] max-w-[90vw] sm:min-w-[220px] sm:max-w-xs snap-start"
-                >
-                  <MenuDisplayItem item={item} currencyCode={currencyCode} />
-                </div>
-              ))}
-            </div>
-          </section>
-        ))
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+          {filteredItems.map((item) => (
+            <MenuDisplayItem
+              key={item.id}
+              item={item}
+              currencyCode={currencyCode}
+            />
+          ))}
+        </div>
       )}
     </div>
   );

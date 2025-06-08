@@ -81,20 +81,20 @@ export default function OrderHistoryPage() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <header className="w-full border-b bg-background/80 sticky top-0 z-10">
+      <header className="w-full border-b bg-background/80 sticky top-0 z-10 shadow-sm">
         <div className="max-w-2xl mx-auto flex items-center gap-2 px-4 py-4 sm:py-6">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => router.back()}
             aria-label="Back to menu"
-            className="focus-visible:ring-2 focus-visible:ring-primary"
+            className="focus-visible:ring-2 focus-visible:ring-primary rounded-full"
           >
             <ArrowLeft className="h-6 w-6" />
           </Button>
-          <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2 truncate">
+          <h1 className="text-2xl font-bold flex items-center gap-2 truncate">
             <Clock className="h-6 w-6 shrink-0" />
-            <span className="truncate">Your Order History</span>
+            <span className="truncate">Order History</span>
           </h1>
         </div>
       </header>
@@ -112,8 +112,11 @@ export default function OrderHistoryPage() {
         ) : (
           <div className="flex flex-col gap-4">
             {orderHistory.map((order) => (
-              <Card key={order.id} className="overflow-hidden w-full">
-                <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-2 gap-1 sm:gap-0">
+              <Card
+                key={order.id}
+                className="overflow-hidden w-full rounded-2xl border border-border bg-white dark:bg-zinc-900 shadow-md"
+              >
+                <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-2 gap-1 sm:gap-0 bg-muted/40">
                   <div className="truncate">
                     <CardTitle className="text-base font-semibold truncate">
                       Order #

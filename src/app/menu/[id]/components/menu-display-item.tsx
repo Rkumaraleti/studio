@@ -38,73 +38,71 @@ export function MenuDisplayItem({ item, currencyCode }: MenuDisplayItemProps) {
   };
 
   return (
-    <Card className="overflow-hidden group hover:shadow-lg transition-shadow">
-      <div className="relative aspect-square">
+    <Card className="flex flex-row sm:flex-col items-center sm:items-stretch gap-4 sm:gap-0 p-4 sm:p-0 rounded-xl shadow-sm bg-white dark:bg-zinc-900 h-full">
+      <div className="relative flex-shrink-0 w-20 h-20 sm:w-full sm:h-40 rounded-lg sm:rounded-t-xl sm:rounded-b-none overflow-hidden bg-muted">
         {item.imageUrl ? (
           <Image
             src={item.imageUrl}
             alt={item.name}
             fill
-            className="object-cover transition-transform group-hover:scale-105"
+            className="object-cover"
           />
         ) : (
-          <div className="w-full h-full bg-muted flex items-center justify-center">
+          <div className="w-full h-full flex items-center justify-center">
             <ImageOff className="h-8 w-8 text-muted-foreground" />
           </div>
         )}
       </div>
-      <CardContent className="p-4">
-        <div className="space-y-2">
-          <div className="flex items-start justify-between gap-2">
-            <h3 className="font-semibold leading-none tracking-tight">
-              {item.name}
-            </h3>
-            <p className="font-medium text-primary">
+      <div className="flex-1 flex flex-col justify-between h-full min-w-0 sm:p-4">
+        <div>
+          <div className="flex justify-between items-center gap-2">
+            <h3 className="font-semibold text-base truncate">{item.name}</h3>
+            <span className="font-bold text-primary text-base whitespace-nowrap">
               {formatPrice(item.price, currencyCode)}
-            </p>
+            </span>
           </div>
           {item.description && (
-            <p className="text-sm text-muted-foreground line-clamp-2">
+            <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
               {item.description}
             </p>
           )}
         </div>
-      </CardContent>
-      <CardFooter className="p-4 pt-0">
-        {currentQuantity === 0 ? (
-          <Button
-            onClick={handleIncrement}
-            className="w-full bg-primary hover:bg-primary/90"
-          >
-            <ShoppingCart className="mr-2 h-4 w-4" />
-            Add to Cart
-          </Button>
-        ) : (
-          <div className="flex items-center justify-between w-full">
+        <div className="mt-2 flex items-center justify-end">
+          {currentQuantity === 0 ? (
             <Button
-              variant="outline"
-              size="icon"
-              onClick={handleDecrement}
-              className={cn(
-                "h-8 w-8",
-                currentQuantity === 0 && "opacity-50 cursor-not-allowed"
-              )}
-              disabled={currentQuantity === 0}
-            >
-              <MinusCircle className="h-4 w-4" />
-            </Button>
-            <span className="font-medium">{currentQuantity}</span>
-            <Button
-              variant="outline"
-              size="icon"
               onClick={handleIncrement}
-              className="h-8 w-8"
+              className="bg-primary hover:bg-primary/90 rounded-full text-sm font-semibold px-4 py-2"
             >
-              <PlusCircle className="h-4 w-4" />
+              <ShoppingCart className="mr-2 h-4 w-4" />
+              Add to Cart
             </Button>
-          </div>
-        )}
-      </CardFooter>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={handleDecrement}
+                className={cn(
+                  "h-8 w-8 rounded-full border border-border",
+                  currentQuantity === 0 && "opacity-50 cursor-not-allowed"
+                )}
+                disabled={currentQuantity === 0}
+              >
+                <MinusCircle className="h-4 w-4" />
+              </Button>
+              <span className="font-medium text-base">{currentQuantity}</span>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={handleIncrement}
+                className="h-8 w-8 rounded-full border border-border"
+              >
+                <PlusCircle className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
     </Card>
   );
 }
