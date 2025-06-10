@@ -36,6 +36,8 @@ import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
 import { Clock } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { PaymentDialog } from "@/components/payment/payment-dialog";
+import { PaymentIntent } from "@/lib/mock-payment";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -82,6 +84,8 @@ export default function PublicMenuPage({ params }: PageProps) {
   const [orderHistory, setOrderHistory] = useState<any[]>([]);
   const [orderHistoryLoading, setOrderHistoryLoading] = useState(false);
   const router = useRouter();
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchProfile() {
@@ -186,22 +190,30 @@ export default function PublicMenuPage({ params }: PageProps) {
     };
   }, [orderStatus?.id, toast, router, id]);
 
-  // Fetch order history for this user and merchant
-  useEffect(() => {
-    async function fetchOrderHistory() {
-      if (!user?.id || !id) return;
-      setOrderHistoryLoading(true);
+  const fetchOrderHistory = async () => {
+    if (!user?.id || !id) return;
+    setOrderHistoryLoading(true);
+    try {
       const { data, error } = await supabase
         .from("orders")
         .select("id, display_order_id, status, created_at, items")
         .eq("customer_uid", user.id)
         .eq("public_merchant_id", id)
         .order("created_at", { ascending: false });
-      if (!error && data) setOrderHistory(data);
+
+      if (error) throw error;
+      setOrderHistory(data);
+    } catch (error) {
+      console.error("Error fetching order history:", error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch order history.",
+        variant: "destructive",
+      });
+    } finally {
       setOrderHistoryLoading(false);
     }
-    fetchOrderHistory();
-  }, [user?.id, id, orderStatus]); // refetch on new order
+  };
 
   const handlePayment = async () => {
     if (cartItems.length === 0) return;
@@ -213,36 +225,126 @@ export default function PublicMenuPage({ params }: PageProps) {
       });
       return;
     }
+
+    // Create pending order first
     setIsSubmitting(true);
     try {
       const payload = {
         public_merchant_id: id,
-        customer_uid: user.id, // anonymous or authenticated user id
+        customer_uid: user.id,
         items: cartItems,
         total: getTotalPrice(),
         status: "pending" as const,
+        payment_status: "pending" as const,
       };
-      console.log("[handlePayment] Creating order with payload:", payload);
+      console.log("[handlePayment] Creating pending order:", payload);
       const order = await createOrder(payload);
+      setCurrentOrderId(order.id);
       setOrderStatus({
         id: order.id,
         status: "pending",
         display_order_id: order.display_order_id,
       });
-      clearCart();
-      toast({
-        title: "Order Placed Successfully",
-        description: `Your order has been sent to the merchant.`,
-      });
+      setShowPaymentDialog(true);
     } catch (error) {
-      console.error("Error creating order:", error);
+      console.error("Error creating pending order:", error);
       toast({
         title: "Error",
-        description: "Failed to place order. Please try again.",
+        description: "Failed to create order. Please try again.",
         variant: "destructive",
       });
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handlePaymentSuccess = async (paymentIntent: PaymentIntent) => {
+    if (!currentOrderId) return;
+
+    setIsSubmitting(true);
+    try {
+      // Update order with payment details
+      const { data: updatedOrder, error } = await supabase
+        .from("orders")
+        .update({
+          status: "confirmed",
+          payment_status: "paid",
+          payment_intent_id: paymentIntent.id,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", currentOrderId)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setOrderStatus({
+        id: updatedOrder.id,
+        status: "confirmed",
+        display_order_id: updatedOrder.display_order_id,
+      });
+
+      clearCart();
+      toast({
+        title: "Order Confirmed",
+        description: "Your payment has been processed and order is confirmed.",
+      });
+
+      // Refresh order history
+      fetchOrderHistory();
+    } catch (error) {
+      console.error("Error updating order:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update order status. Please contact support.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+      setShowPaymentDialog(false);
+      setCurrentOrderId(null);
+    }
+  };
+
+  const handlePaymentFailure = async () => {
+    if (!currentOrderId) return;
+
+    try {
+      // Update order status to cancelled
+      const { error } = await supabase
+        .from("orders")
+        .update({
+          status: "cancelled",
+          payment_status: "failed",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", currentOrderId);
+
+      if (error) throw error;
+
+      setOrderStatus({
+        id: currentOrderId,
+        status: "cancelled",
+        display_order_id: orderStatus?.display_order_id || "",
+      });
+
+      toast({
+        title: "Order Cancelled",
+        description: "Payment was not successful. Order has been cancelled.",
+        variant: "destructive",
+      });
+
+      // Refresh order history
+      fetchOrderHistory();
+    } catch (error) {
+      console.error("Error cancelling order:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update order status. Please contact support.",
+        variant: "destructive",
+      });
+    } finally {
+      setCurrentOrderId(null);
     }
   };
 
@@ -301,14 +403,16 @@ export default function PublicMenuPage({ params }: PageProps) {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="border-b">
-        <div className="container mx-auto max-w-5xl px-4 py-6 flex items-center justify-between">
-          <div className="flex flex-col gap-2">
-            <h1 className="text-3xl font-bold tracking-tight">
+      <div className="border-b bg-background/80 backdrop-blur-sm">
+        <div className="container mx-auto max-w-5xl px-4 py-3 flex items-center justify-between">
+          <div className="flex flex-col">
+            <h1 className="text-2xl font-bold tracking-tight">
               {restaurant.name}
             </h1>
             {restaurant.description && (
-              <p className="text-muted-foreground">{restaurant.description}</p>
+              <p className="text-sm text-muted-foreground line-clamp-1">
+                {restaurant.description}
+              </p>
             )}
           </div>
           {/* Order History Icon */}
@@ -317,13 +421,13 @@ export default function PublicMenuPage({ params }: PageProps) {
             className="ml-4 p-2 rounded-full hover:bg-muted transition-colors"
             aria-label="View your order history"
           >
-            <Clock className="h-7 w-7 text-muted-foreground" />
+            <Clock className="h-6 w-6 text-muted-foreground" />
           </Link>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="container mx-auto max-w-5xl px-4 py-8 pb-32">
+      <div className="container mx-auto max-w-5xl px-4 py-4 pb-24">
         <MenuDisplay
           public_merchant_id={id}
           currencyCode="INR"
@@ -500,38 +604,36 @@ export default function PublicMenuPage({ params }: PageProps) {
       </Sheet>
 
       {/* Cart Footer */}
-      <footer className="fixed bottom-0 left-0 w-full bg-background border-t z-50">
-        <div className="container mx-auto max-w-5xl px-4 py-3">
-          <div className="w-full mb-2">
-            <div className="flex flex-row justify-between items-baseline w-full px-2 py-2 rounded bg-muted/60">
+      <footer className="fixed bottom-0 left-0 w-full bg-background/80 backdrop-blur-sm border-t z-50">
+        <div className="container mx-auto max-w-5xl px-4 py-2">
+          <div className="flex flex-col gap-1.5">
+            <div className="flex justify-between items-center px-2 py-1.5 rounded bg-muted/60">
               <span className="text-sm text-muted-foreground">
                 Total Amount:
               </span>
-              <span className="text-xl font-bold">
+              <span className="text-lg font-bold">
                 ₹{getTotalPrice().toFixed(2)}
               </span>
             </div>
-          </div>
-          <div className="flex flex-row items-end justify-between gap-2">
-            <Button
-              variant="outline"
-              size="lg"
-              className="flex items-center gap-2 w-full sm:w-auto"
-              disabled={getTotalItems() === 0}
-              onClick={() => setShowCart(true)}
-            >
-              <ShoppingCart className="h-5 w-5" />
-              <span>Cart</span>
-              {getTotalItems() > 0 && (
-                <Badge variant="secondary" className="ml-2">
-                  {getTotalItems()}
-                </Badge>
-              )}
-            </Button>
-            <div className="flex flex-col items-end w-full sm:w-auto max-w-xs">
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="lg"
+                className="flex-1"
+                disabled={getTotalItems() === 0}
+                onClick={() => setShowCart(true)}
+              >
+                <ShoppingCart className="h-5 w-5 mr-2" />
+                <span>Cart</span>
+                {getTotalItems() > 0 && (
+                  <Badge variant="secondary" className="ml-2">
+                    {getTotalItems()}
+                  </Badge>
+                )}
+              </Button>
               <Button
                 size="lg"
-                className="w-full sm:w-auto"
+                className="flex-1"
                 disabled={getTotalItems() === 0 || isSubmitting}
                 onClick={handlePayment}
               >
@@ -548,6 +650,18 @@ export default function PublicMenuPage({ params }: PageProps) {
           </div>
         </div>
       </footer>
+
+      {/* Payment Dialog */}
+      <PaymentDialog
+        isOpen={showPaymentDialog}
+        onClose={() => {
+          setShowPaymentDialog(false);
+          handlePaymentFailure();
+        }}
+        amount={getTotalPrice()}
+        currency="INR"
+        onSuccess={handlePaymentSuccess}
+      />
     </div>
   );
 }
