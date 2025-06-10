@@ -11,9 +11,7 @@ export default function AuthLayout({
       <div className="mb-8">
         <AppLogo size={40} />
       </div>
-      <div className="w-full max-w-md">
-        {children}
-      </div>
+      <div className="w-full max-w-md">{children}</div>
     </div>
   );
 }
